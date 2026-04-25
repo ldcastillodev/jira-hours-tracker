@@ -11,7 +11,7 @@ export class DevelopersService {
     });
   }
 
-  async findOne(id: string) {
+  async findOne(id: number) {
     const dev = await this.prisma.developer.findUnique({ where: { id } });
     if (!dev) throw new NotFoundException(`Developer ${id} not found`);
     return dev;
@@ -20,18 +20,18 @@ export class DevelopersService {
   create(data: {
     name: string;
     email: string;
-    jiraAccountId?: string;
+    jiraAccountId: string;
     slackId?: string;
   }) {
     return this.prisma.developer.create({ data });
   }
 
   async update(
-    id: string,
+    id: number,
     data: {
       name?: string;
       email?: string;
-      jiraAccountId?: string | null;
+      jiraAccountId?: string;
       slackId?: string | null;
     },
   ) {
@@ -39,7 +39,7 @@ export class DevelopersService {
     return this.prisma.developer.update({ where: { id }, data });
   }
 
-  async delete(id: string) {
+  async delete(id: number) {
     await this.findOne(id);
     try {
       await this.prisma.developer.delete({ where: { id } });

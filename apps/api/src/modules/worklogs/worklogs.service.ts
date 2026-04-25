@@ -9,15 +9,15 @@ export class WorklogsService {
     const where = month ? this.buildMonthFilter(month) : {};
     return this.prisma.worklog.findMany({
       where,
-      include: { project: true, developer: true },
+      include: { component: true },
       orderBy: { date: 'desc' },
     });
   }
 
-  async findOne(id: string) {
+  async findOne(id: number) {
     const worklog = await this.prisma.worklog.findUnique({
       where: { id },
-      include: { project: true, developer: true },
+      include: { component: true },
     });
     if (!worklog) throw new NotFoundException(`Worklog ${id} not found`);
     return worklog;
@@ -26,31 +26,27 @@ export class WorklogsService {
   create(data: {
     date: string;
     hours: number;
-    isBillable?: boolean;
-    projectId: string;
-    developerId: string;
-    jiraIssueId?: string;
+    jiraIssueId: string;
+    jiraAccountId: string;
+    componentId: number;
   }) {
     return this.prisma.worklog.create({
       data: {
         date: new Date(data.date),
         hours: data.hours,
-        isBillable: data.isBillable ?? true,
-        projectId: data.projectId,
-        developerId: data.developerId,
         jiraIssueId: data.jiraIssueId,
+        jiraAccountId: data.jiraAccountId,
+        componentId: data.componentId,
       },
     });
   }
 
   async update(
-    id: string,
+    id: number,
     data: {
       date?: string;
       hours?: number;
-      isBillable?: boolean;
-      projectId?: string;
-      developerId?: string;
+      componentId?: number;
     },
   ) {
     await this.findOne(id);
@@ -59,9 +55,7 @@ export class WorklogsService {
       data: {
         ...(data.date && { date: new Date(data.date) }),
         ...(data.hours !== undefined && { hours: data.hours }),
-        ...(data.isBillable !== undefined && { isBillable: data.isBillable }),
-        ...(data.projectId && { projectId: data.projectId }),
-        ...(data.developerId && { developerId: data.developerId }),
+        ...(data.componentId !== undefined && { componentId: data.componentId }),
       },
     });
   }

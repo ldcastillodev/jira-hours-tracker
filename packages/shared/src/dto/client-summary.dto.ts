@@ -1,7 +1,8 @@
 export interface ComponentSummaryDto {
-  projectId: string;
+  componentId: number;
+  componentName: string;
   projectName: string;
-  parentProjectName: string | null;
+  isBillable: boolean;
   totalHours: number;
 }
 

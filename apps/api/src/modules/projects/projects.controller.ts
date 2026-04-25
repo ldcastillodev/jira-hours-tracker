@@ -12,7 +12,7 @@ export class ProjectsController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.projectsService.findOne(id);
+    return this.projectsService.findOne(+id);
   }
 
   @Post()
@@ -20,8 +20,7 @@ export class ProjectsController {
     @Body()
     body: {
       name: string;
-      monthlyBudget?: number;
-      parentId?: string;
+      monthlyBudget: number;
     },
   ) {
     return this.projectsService.create(body);
@@ -34,10 +33,9 @@ export class ProjectsController {
     body: {
       name?: string;
       monthlyBudget?: number;
-      parentId?: string | null;
     },
   ) {
-    return this.projectsService.update(id, body);
+    return this.projectsService.update(+id, body);
   }
 
   @Patch(':id')
@@ -47,14 +45,41 @@ export class ProjectsController {
     body: {
       name?: string;
       monthlyBudget?: number;
-      parentId?: string | null;
     },
   ) {
-    return this.projectsService.update(id, body);
+    return this.projectsService.update(+id, body);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.projectsService.delete(id);
+    return this.projectsService.delete(+id);
+  }
+
+  // --- Component endpoints ---
+
+  @Get(':id/components')
+  findComponents(@Param('id') id: string) {
+    return this.projectsService.findComponents(+id);
+  }
+
+  @Post(':id/components')
+  createComponent(
+    @Param('id') id: string,
+    @Body() body: { name: string; isBillable: boolean },
+  ) {
+    return this.projectsService.createComponent(+id, body);
+  }
+
+  @Patch('components/:compId')
+  updateComponent(
+    @Param('compId') compId: string,
+    @Body() body: { name?: string; isBillable?: boolean },
+  ) {
+    return this.projectsService.updateComponent(+compId, body);
+  }
+
+  @Delete('components/:compId')
+  deleteComponent(@Param('compId') compId: string) {
+    return this.projectsService.deleteComponent(+compId);
   }
 }

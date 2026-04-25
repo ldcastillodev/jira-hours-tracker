@@ -5,10 +5,10 @@ import { DeveloperForm } from './DeveloperForm';
 import { showToast } from '../ui/Toast';
 
 interface Developer {
-  id: string;
+  id: number;
   name: string;
   email: string;
-  jiraAccountId: string | null;
+  jiraAccountId: string;
   slackId: string | null;
 }
 

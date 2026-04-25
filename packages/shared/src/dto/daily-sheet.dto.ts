@@ -1,5 +1,4 @@
 export interface DailyEntryDto {
-  developerId: string;
   developerName: string;
   componentName: string;
   hours: number;

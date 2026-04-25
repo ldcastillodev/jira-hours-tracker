@@ -2,32 +2,40 @@ import { useApi } from '../hooks/useApi';
 import { Header } from '../components/layout/Header';
 import { DeveloperPanel } from '../components/manage/DeveloperPanel';
 import { ProjectPanel } from '../components/manage/ProjectPanel';
+import { ComponentPanel } from '../components/manage/ComponentPanel';
 import { TableSkeleton } from '../components/ui/Skeleton';
 
 interface Developer {
-  id: string;
+  id: number;
   name: string;
   email: string;
-  jiraAccountId: string | null;
+  jiraAccountId: string;
   slackId: string | null;
 }
 
 interface Project {
-  id: string;
+  id: number;
   name: string;
-  monthlyBudget: number | null;
-  children?: Project[];
+  monthlyBudget: number;
+  components?: { id: number; name: string; isBillable: boolean }[];
 }
 
 export function Manage() {
   const devs = useApi<Developer[]>('/developers');
   const projs = useApi<Project[]>('/projects');
 
+  // Flatten components from all projects
+  const allComponents = projs.data
+    ? projs.data.flatMap((p) =>
+        (p.components ?? []).map((c) => ({ ...c, projectId: p.id })),
+      )
+    : [];
+
   return (
     <>
       <Header
         title="Manage"
-        subtitle="Manage developers and projects"
+        subtitle="Manage developers, projects and components"
         badge="CRUD"
       />
 
@@ -47,7 +55,14 @@ export function Manage() {
         ) : projs.error ? (
           <ErrorBlock message={projs.error} />
         ) : (
-          <ProjectPanel projects={projs.data!} onRefresh={projs.refetch} />
+          <>
+            <ProjectPanel projects={projs.data!} onRefresh={projs.refetch} />
+            <ComponentPanel
+              components={allComponents}
+              projects={projs.data!}
+              onRefresh={projs.refetch}
+            />
+          </>
         )}
       </div>
     </>

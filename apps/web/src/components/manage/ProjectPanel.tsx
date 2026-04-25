@@ -5,9 +5,9 @@ import { ProjectForm } from './ProjectForm';
 import { showToast } from '../ui/Toast';
 
 interface Project {
-  id: string;
+  id: number;
   name: string;
-  monthlyBudget: number | null;
+  monthlyBudget: number;
 }
 
 interface ProjectPanelProps {

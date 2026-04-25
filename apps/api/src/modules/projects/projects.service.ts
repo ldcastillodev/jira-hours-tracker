@@ -7,47 +7,41 @@ export class ProjectsService {
 
   findAll() {
     return this.prisma.project.findMany({
-      include: { children: true },
-      where: { parentId: null },
+      include: { components: true },
       orderBy: { name: 'asc' },
     });
   }
 
-  async findOne(id: string) {
+  async findOne(id: number) {
     const project = await this.prisma.project.findUnique({
       where: { id },
-      include: { children: true, parent: true },
+      include: { components: true },
     });
     if (!project) throw new NotFoundException(`Project ${id} not found`);
     return project;
   }
 
-  create(data: { name: string; monthlyBudget?: number; parentId?: string }) {
+  create(data: { name: string; monthlyBudget: number }) {
     return this.prisma.project.create({
       data: {
         name: data.name,
         monthlyBudget: data.monthlyBudget,
-        parentId: data.parentId,
       },
     });
   }
 
-  async update(
-    id: string,
-    data: { name?: string; monthlyBudget?: number; parentId?: string | null },
-  ) {
+  async update(id: number, data: { name?: string; monthlyBudget?: number }) {
     await this.findOne(id);
     return this.prisma.project.update({
       where: { id },
       data: {
         name: data.name,
         monthlyBudget: data.monthlyBudget,
-        parentId: data.parentId,
       },
     });
   }
 
-  async delete(id: string) {
+  async delete(id: number) {
     await this.findOne(id);
     try {
       await this.prisma.project.delete({ where: { id } });
@@ -55,7 +49,54 @@ export class ProjectsService {
     } catch (err: any) {
       if (err.code === 'P2003') {
         throw new ConflictException(
-          'Cannot delete project with existing worklogs or child projects',
+          'Cannot delete project with existing components',
+        );
+      }
+      throw err;
+    }
+  }
+
+  // --- Component CRUD ---
+
+  findComponents(projectId: number) {
+    return this.prisma.component.findMany({
+      where: { projectId },
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  createComponent(
+    projectId: number,
+    data: { name: string; isBillable: boolean },
+  ) {
+    return this.prisma.component.create({
+      data: {
+        name: data.name,
+        isBillable: data.isBillable,
+        projectId,
+      },
+    });
+  }
+
+  async updateComponent(
+    id: number,
+    data: { name?: string; isBillable?: boolean },
+  ) {
+    const comp = await this.prisma.component.findUnique({ where: { id } });
+    if (!comp) throw new NotFoundException(`Component ${id} not found`);
+    return this.prisma.component.update({ where: { id }, data });
+  }
+
+  async deleteComponent(id: number) {
+    const comp = await this.prisma.component.findUnique({ where: { id } });
+    if (!comp) throw new NotFoundException(`Component ${id} not found`);
+    try {
+      await this.prisma.component.delete({ where: { id } });
+      return { deleted: true };
+    } catch (err: any) {
+      if (err.code === 'P2003') {
+        throw new ConflictException(
+          'Cannot delete component with existing worklogs',
         );
       }
       throw err;

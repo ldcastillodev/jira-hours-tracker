@@ -1,0 +1,104 @@
+# Schema Refactor — Documentación
+
+## Qué se cambió
+
+### Objetivo
+Reemplazar el schema original (Project con auto-referencia `parentId`, Developer con `worklogs` directo, Worklog con `projectId + developerId + isBillable`) por un modelo más limpio:
+
+- **Project** → tiene **Components**
+- **Component** → define billability, pertenece a un Project, tiene Worklogs
+- **Worklog** → referencia `componentId` + `jiraAccountId` (string, no FK)
+- Todos los IDs pasan de `String cuid()` a `Int autoincrement()`
+- Se elimina la jerarquía `parentId/parent/children` de Project
+
+---
+
+## Comandos ejecutados
+
+### 1. Reset de la base de datos y aplicación de la migración
+```bash
+# Resetear la DB (borra todos los datos y migraciones previas)
+npx prisma migrate reset --force --schema=packages/db/prisma/schema.prisma
+
+# Aplicar el nuevo schema como migración
+npx prisma migrate dev --name "refactor_schema" --schema=packages/db/prisma/schema.prisma
+```
+
+La migración generada queda en:
+```
+packages/db/prisma/migrations/20260425080955_refactor_schema/migration.sql
+```
+
+### 2. Seed de datos
+```bash
+cd packages/db
+npx ts-node prisma/seed.ts
+```
+
+Resultado: `{ projects: 3, components: 6, developers: 4, worklogs: 258 }`
+
+---
+
+## Archivos modificados
+
+| Archivo | Qué cambió |
+|---------|-----------|
+| `packages/db/prisma/schema.prisma` | Schema completo reemplazado |
+| `packages/db/prisma/seed.ts` | Nuevo seed con Projects, Components, Developers con `jiraAccountId` requerido |
+| `packages/shared/src/dto/client-hours.dto.ts` | `projectId: string` → `number` |
+| `packages/shared/src/dto/month-report.dto.ts` | `developerId: string` → `number` |
+| `packages/shared/src/dto/client-summary.dto.ts` | `ComponentSummaryDto` reescrito: `componentId`, `componentName`, `projectName`, `isBillable` |
+| `packages/shared/src/dto/daily-sheet.dto.ts` | Eliminado `developerId` de `DailyEntryDto` |
+| `apps/api/src/modules/reports/reports.service.ts` | Reescrito completo para nuevo schema |
+| `apps/api/src/modules/jira-sync/jira-sync.service.ts` | Usa `fields: 'worklog,components'`, matchea por `Component.name`, upsert con `jiraAccountId + componentId` |
+| `apps/api/src/modules/projects/projects.service.ts` | Sin jerarquía, incluye `components`, añade CRUD de Component |
+| `apps/api/src/modules/projects/projects.controller.ts` | Añade endpoints de Component, IDs numéricos con `+id` |
+| `apps/api/src/modules/developers/developers.service.ts` | `jiraAccountId` requerido, IDs `Int` |
+| `apps/api/src/modules/developers/developers.controller.ts` | IDs numéricos con `+id` |
+| `apps/api/src/modules/worklogs/worklogs.service.ts` | Usa `componentId + jiraAccountId`, elimina `projectId/developerId/isBillable` |
+| `apps/api/src/modules/worklogs/worklogs.controller.ts` | Body types actualizados |
+| `apps/web/src/pages/Manage.tsx` | Añade `ComponentPanel`, interfaces con IDs `number` |
+| `apps/web/src/components/manage/ComponentPanel.tsx` | **Nuevo** — CRUD de Components |
+| `apps/web/src/components/manage/ProjectPanel.tsx` | Interface con `id: number`, `monthlyBudget: number` |
+| `apps/web/src/components/manage/DeveloperPanel.tsx` | Interface con `id: number`, `jiraAccountId: string` (requerido) |
+| `apps/web/src/components/manage/DeveloperForm.tsx` | Interface actualizada |
+| `apps/web/src/components/manage/ProjectForm.tsx` | Interface actualizada |
+
+---
+
+## Nuevos endpoints
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `GET` | `/projects/:id/components` | Lista components de un project |
+| `POST` | `/projects/:id/components` | Crea un component |
+| `PATCH` | `/projects/components/:compId` | Actualiza un component |
+| `DELETE` | `/projects/components/:compId` | Elimina un component |
+
+---
+
+## Decisiones de diseño
+
+- `Worklog.jiraAccountId` es un `String` plano, **no FK**. Los reportes joinean manualmente con `Developer.jiraAccountId`.
+- `isBillable` vive en `Component`, no en `Worklog`. Un worklog es billable si su component lo es.
+- Jira sync: si el issue no tiene componente en Jira → worklog se **skipea**.
+- `Component.name` es `@unique` — se matchea con `issue.fields.components[0].name` (case-sensitive, el lookup usa `findUnique`).
+- `slackId` en Developer es `String? @unique` (opcional, único cuando presente).
+
+---
+
+## Cómo resetear de nuevo (si hace falta)
+
+```bash
+# Opción A: reset completo (borra datos + migraciones + re-aplica desde cero)
+npx prisma migrate reset --force --schema=packages/db/prisma/schema.prisma
+
+# Opción B: solo re-correr el seed (sin tocar migraciones)
+cd packages/db && npx ts-node prisma/seed.ts
+
+# Opción C: borrar la DB de Docker completamente
+docker compose down -v          # borra el volumen
+docker compose up -d            # levanta de nuevo
+npx prisma migrate deploy --schema=packages/db/prisma/schema.prisma
+cd packages/db && npx ts-node prisma/seed.ts
+```

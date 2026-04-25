@@ -12,7 +12,7 @@ export class WorklogsController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.worklogsService.findOne(id);
+    return this.worklogsService.findOne(+id);
   }
 
   @Post()
@@ -21,10 +21,9 @@ export class WorklogsController {
     body: {
       date: string;
       hours: number;
-      isBillable?: boolean;
-      projectId: string;
-      developerId: string;
-      jiraIssueId?: string;
+      jiraIssueId: string;
+      jiraAccountId: string;
+      componentId: number;
     },
   ) {
     return this.worklogsService.create(body);
@@ -37,11 +36,9 @@ export class WorklogsController {
     body: {
       date?: string;
       hours?: number;
-      isBillable?: boolean;
-      projectId?: string;
-      developerId?: string;
+      componentId?: number;
     },
   ) {
-    return this.worklogsService.update(id, body);
+    return this.worklogsService.update(+id, body);
   }
 }

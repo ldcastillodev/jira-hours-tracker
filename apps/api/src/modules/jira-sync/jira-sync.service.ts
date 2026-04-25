@@ -21,6 +21,7 @@ interface JiraSearchResponse {
         total: number;
         worklogs: JiraWorklog[];
       };
+      components: Array<{ name: string }>;
     };
   }>;
   total: number;
@@ -56,7 +57,8 @@ export class JiraSyncService {
 
     const since = sinceDate || this.defaultSinceDate();
     this.logger.log(`Starting Jira sync since ${since}`);
-
+    const components = await this.prisma.component.findMany().then((comps) => comps.map((c) => c.name));
+    this.logger.debug(`Existing components in DB: ${components.join(', ')}`);
     let startAt = 0;
     const maxResults = 50;
     let totalProcessed = 0;
@@ -65,9 +67,14 @@ export class JiraSyncService {
 
     let hasMore = true;
     while (hasMore) {
-      const jql = `worklogDate >= "${since}" ORDER BY updated DESC`;
-      const url = `${baseUrl}/rest/api/3/search`;
-
+      const jql = `component in (${components.map((c) => `"${c}"`).join(',')}) AND worklogDate >= "${since}"`;
+      const url = `${baseUrl}/rest/api/3/search/jql`;
+      console.log({
+            jql,
+            startAt,
+            maxResults,
+            fields: 'worklog,components',
+          })
       const { data } = await firstValueFrom(
         this.httpService.get<JiraSearchResponse>(url, {
           headers,
@@ -75,13 +82,20 @@ export class JiraSyncService {
             jql,
             startAt,
             maxResults,
-            fields: 'worklog',
+            fields: 'worklog,components',
           },
         }),
       );
 
       for (const issue of data.issues) {
         const worklogs = issue.fields.worklog.worklogs;
+        const componentName = issue.fields.components?.[0]?.name;
+
+        if (!componentName) {
+          skippedCount += issue.fields.worklog.total;
+          totalProcessed += issue.fields.worklog.total;
+          continue;
+        }
 
         const allWorklogs =
           issue.fields.worklog.total > worklogs.length
@@ -92,7 +106,7 @@ export class JiraSyncService {
           const startedDate = new Date(wl.started);
           if (startedDate < new Date(since)) continue;
 
-          const result = await this.upsertWorklog(wl, issue.key);
+          const result = await this.upsertWorklog(wl, componentName);
           if (result === 'upserted') upsertedCount++;
           else skippedCount++;
           totalProcessed++;
@@ -145,8 +159,20 @@ export class JiraSyncService {
 
   private async upsertWorklog(
     wl: JiraWorklog,
-    issueKey: string,
+    componentName: string,
   ): Promise<'upserted' | 'skipped'> {
+    const component = await this.prisma.component.findUnique({
+      where: { name: componentName },
+    });
+
+    if (!component) {
+      this.logger.debug(
+        `Skipping worklog ${wl.id}: no component matching "${componentName}"`,
+      );
+      return 'skipped';
+    }
+
+    // Verify the developer exists
     const developer = await this.prisma.developer.findUnique({
       where: { jiraAccountId: wl.author.accountId },
     });
@@ -154,14 +180,6 @@ export class JiraSyncService {
     if (!developer) {
       this.logger.debug(
         `Skipping worklog ${wl.id}: no developer for Jira account ${wl.author.accountId} (${wl.author.displayName})`,
-      );
-      return 'skipped';
-    }
-
-    const project = await this.resolveProject(issueKey);
-    if (!project) {
-      this.logger.debug(
-        `Skipping worklog ${wl.id}: no project for issue ${issueKey}`,
       );
       return 'skipped';
     }
@@ -175,28 +193,17 @@ export class JiraSyncService {
       update: {
         hours,
         date,
-        isBillable: true,
       },
       create: {
         jiraIssueId: wl.id,
         date,
         hours,
-        isBillable: true,
-        projectId: project.id,
-        developerId: developer.id,
+        jiraAccountId: wl.author.accountId,
+        componentId: component.id,
       },
     });
 
     return 'upserted';
-  }
-
-  private async resolveProject(issueKey: string) {
-    const prefix = issueKey.split('-')[0];
-    return (
-      (await this.prisma.project.findFirst({
-        where: { name: { contains: prefix, mode: 'insensitive' } },
-      })) ?? null
-    );
   }
 
   private defaultSinceDate(): string {

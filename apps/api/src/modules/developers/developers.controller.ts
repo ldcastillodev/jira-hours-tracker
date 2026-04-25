@@ -12,7 +12,7 @@ export class DevelopersController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.developersService.findOne(id);
+    return this.developersService.findOne(+id);
   }
 
   @Post()
@@ -21,7 +21,7 @@ export class DevelopersController {
     body: {
       name: string;
       email: string;
-      jiraAccountId?: string;
+      jiraAccountId: string;
       slackId?: string;
     },
   ) {
@@ -35,11 +35,11 @@ export class DevelopersController {
     body: {
       name?: string;
       email?: string;
-      jiraAccountId?: string | null;
+      jiraAccountId?: string;
       slackId?: string | null;
     },
   ) {
-    return this.developersService.update(id, body);
+    return this.developersService.update(+id, body);
   }
 
   @Patch(':id')
@@ -49,15 +49,15 @@ export class DevelopersController {
     body: {
       name?: string;
       email?: string;
-      jiraAccountId?: string | null;
+      jiraAccountId?: string;
       slackId?: string | null;
     },
   ) {
-    return this.developersService.update(id, body);
+    return this.developersService.update(+id, body);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.developersService.delete(id);
+    return this.developersService.delete(+id);
   }
 }

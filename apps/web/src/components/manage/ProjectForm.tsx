@@ -1,9 +1,9 @@
 import { useState } from 'react';
 
 interface Project {
-  id: string;
+  id: number;
   name: string;
-  monthlyBudget: number | null;
+  monthlyBudget: number;
 }
 
 interface ProjectFormProps {

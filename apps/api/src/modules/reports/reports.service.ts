@@ -15,10 +15,8 @@ export class ReportsService {
     const dateFilter = month ? this.buildMonthFilter(month) : {};
 
     const projects = await this.prisma.project.findMany({
-      where: { parentId: null },
       include: {
-        worklogs: { where: dateFilter },
-        children: {
+        components: {
           include: { worklogs: { where: dateFilter } },
         },
       },
@@ -26,17 +24,12 @@ export class ReportsService {
     });
 
     const clients = projects.map((project) => {
-      const directHours = project.worklogs.reduce(
-        (sum, w) => sum + Number(w.hours),
+      const used = project.components.reduce(
+        (sum, comp) =>
+          sum + comp.worklogs.reduce((s, w) => s + Number(w.hours), 0),
         0,
       );
-      const childHours = project.children.reduce(
-        (sum, child) =>
-          sum + child.worklogs.reduce((s, w) => s + Number(w.hours), 0),
-        0,
-      );
-      const used = directHours + childHours;
-      const contracted = Number(project.monthlyBudget ?? 0);
+      const contracted = Number(project.monthlyBudget);
       const remaining = contracted - used;
       const percentUsed = contracted > 0 ? (used / contracted) * 100 : 0;
 
@@ -66,8 +59,12 @@ export class ReportsService {
 
     const worklogs = await this.prisma.worklog.findMany({
       where: dateFilter,
-      include: { developer: true },
+      include: { component: true },
     });
+
+    // Build a map of jiraAccountId -> developer name
+    const allDevs = await this.prisma.developer.findMany();
+    const devNameMap = new Map(allDevs.map((d) => [d.jiraAccountId, d.name]));
 
     const devMap = new Map<
       string,
@@ -75,13 +72,13 @@ export class ReportsService {
     >();
 
     for (const w of worklogs) {
-      const key = w.developerId;
+      const key = w.jiraAccountId;
       const entry = devMap.get(key) || {
-        name: w.developer.name,
+        name: devNameMap.get(key) || key,
         billable: 0,
         nonBillable: 0,
       };
-      if (w.isBillable) {
+      if (w.component.isBillable) {
         entry.billable += Number(w.hours);
       } else {
         entry.nonBillable += Number(w.hours);
@@ -89,8 +86,11 @@ export class ReportsService {
       devMap.set(key, entry);
     }
 
-    const developers = Array.from(devMap.entries()).map(([id, d]) => ({
-      developerId: id,
+    // Resolve developer IDs
+    const devIdMap = new Map(allDevs.map((d) => [d.jiraAccountId, d.id]));
+
+    const developers = Array.from(devMap.entries()).map(([jiraAccId, d]) => ({
+      developerId: devIdMap.get(jiraAccId) ?? 0,
       developerName: d.name,
       billableHours: d.billable,
       nonBillableHours: d.nonBillable,
@@ -110,11 +110,9 @@ export class ReportsService {
     const dateFilter = month ? this.buildMonthFilter(month) : {};
     const resolvedMonth = month || this.currentMonth();
 
-    // Components = projects with a parentId (children)
-    const components = await this.prisma.project.findMany({
-      where: { parentId: { not: null } },
+    const components = await this.prisma.component.findMany({
       include: {
-        parent: true,
+        project: true,
         worklogs: { where: dateFilter },
       },
       orderBy: { name: 'asc' },
@@ -123,9 +121,10 @@ export class ReportsService {
     return {
       month: resolvedMonth,
       components: components.map((c) => ({
-        projectId: c.id,
-        projectName: c.name,
-        parentProjectName: c.parent?.name ?? null,
+        componentId: c.id,
+        componentName: c.name,
+        projectName: c.project.name,
+        isBillable: c.isBillable,
         totalHours: c.worklogs.reduce((sum, w) => sum + Number(w.hours), 0),
       })),
     };
@@ -141,18 +140,20 @@ export class ReportsService {
         date: { gte: day, lt: nextDay },
       },
       include: {
-        developer: true,
-        project: true,
+        component: true,
       },
-      orderBy: [{ developer: { name: 'asc' } }, { project: { name: 'asc' } }],
+      orderBy: [{ jiraAccountId: 'asc' }, { component: { name: 'asc' } }],
     });
+
+    // Resolve developer names from jiraAccountId
+    const allDevs = await this.prisma.developer.findMany();
+    const devNameMap = new Map(allDevs.map((d) => [d.jiraAccountId, d.name]));
 
     return {
       date,
       entries: worklogs.map((w) => ({
-        developerId: w.developerId,
-        developerName: w.developer.name,
-        componentName: w.project.name,
+        developerName: devNameMap.get(w.jiraAccountId) || w.jiraAccountId,
+        componentName: w.component.name,
         hours: Number(w.hours),
       })),
     };

@@ -1,5 +1,5 @@
 export interface ClientHoursDto {
-  projectId: string;
+  projectId: number;
   projectName: string;
   contracted: number;
   used: number;

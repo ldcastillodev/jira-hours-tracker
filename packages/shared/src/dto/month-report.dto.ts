@@ -1,5 +1,5 @@
 export interface DeveloperWorkloadDto {
-  developerId: string;
+  developerId: number;
   developerName: string;
   billableHours: number;
   nonBillableHours: number;
