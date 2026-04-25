@@ -10,7 +10,7 @@ import { JiraSyncModule } from './modules/jira-sync/jira-sync.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, envFilePath: '../../.env' }),
     PrismaModule,
     HealthModule,
     ProjectsModule,
