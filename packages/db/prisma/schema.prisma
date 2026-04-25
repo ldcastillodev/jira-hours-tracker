@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Project {
+  id            String    @id @default(cuid())
+  name          String
+  monthlyBudget Decimal?  @map("monthly_budget") @db.Decimal(10, 2)
+  parentId      String?   @map("parent_id")
+  parent        Project?  @relation("ProjectHierarchy", fields: [parentId], references: [id])
+  children      Project[] @relation("ProjectHierarchy")
+  worklogs      Worklog[]
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@map("projects")
+}
+
+model Developer {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  jiraAccountId String?   @unique @map("jira_account_id")
+  slackId       String?   @map("slack_id")
+  worklogs      Worklog[]
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@map("developers")
+}
+
+model Worklog {
+  id          String    @id @default(cuid())
+  date        DateTime  @db.Date
+  hours       Decimal   @db.Decimal(6, 2)
+  isBillable  Boolean   @default(true) @map("is_billable")
+  jiraIssueId String?   @unique @map("jira_issue_id")
+  projectId   String    @map("project_id")
+  project     Project   @relation(fields: [projectId], references: [id])
+  developerId String    @map("developer_id")
+  developer   Developer @relation(fields: [developerId], references: [id])
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([projectId, date])
+  @@index([developerId, date])
+  @@map("worklogs")
+}

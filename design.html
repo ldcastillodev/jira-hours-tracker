@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MgS — Client Hours Report</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: #0d1117;
+      color: #e2e8f0;
+      padding: 32px 28px;
+      min-height: 100vh;
+    }
+    
+    .header {
+      margin-bottom: 32px;
+      border-bottom: 1px solid #1e293b;
+      padding-bottom: 20px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    
+    .header h1 {
+      font-family: 'Space Mono', monospace;
+      font-size: 20px;
+      font-weight: 700;
+      color: #f8fafc;
+      letter-spacing: -0.5px;
+    }
+    
+    .header p {
+      font-size: 12px;
+      color: #475569;
+      margin-top: 4px;
+    }
+    
+    .badge {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      padding: 4px 10px;
+      background: #131b2e;
+      border: 1px solid #1e293b;
+      border-radius: 20px;
+      color: #64748b;
+      letter-spacing: 0.5px;
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+    
+    @media (max-width: 700px) {
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    
+    .stat-card {
+      background: #131b2e;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 16px;
+    }
+    
+    .stat-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.9px;
+      color: #475569;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    
+    .stat-value {
+      font-family: 'Space Mono', monospace;
+      font-size: 26px;
+      font-weight: 700;
+      line-height: 1;
+    }
+    
+    .stat-sub {
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 4px;
+    }
+    
+    .alert-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #f87171;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 20px;
+      margin-top: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .chart-section {
+      background: #0f1623;
+      border: 1px solid #1e293b;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 28px;
+    }
+    
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    
+    .section-title {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #64748b;
+    }
+    
+    .legend {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+    
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+    }
+    
+    .chart-wrapper {
+      position: relative;
+      height: 340px;
+    }
+    
+    .table-section {
+      background: #0f1623;
+      border: 1px solid #1e293b;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+    }
+    
+    thead th {
+      padding: 10px 16px;
+      text-align: right;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #475569;
+      font-weight: 400;
+      border-bottom: 1px solid #1e293b;
+      background: #0d1117;
+    }
+    
+    thead th:first-child {
+      text-align: left;
+    }
+    
+    tbody td {
+      padding: 10px 16px;
+      text-align: right;
+      border-bottom: 1px solid #0f172a;
+      color: #94a3b8;
+    }
+    
+    tbody td:first-child {
+      text-align: left;
+      font-weight: 500;
+      color: #e2e8f0;
+    }
+    
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+    
+    tbody tr:hover td {
+      background: #131b2e;
+    }
+    
+    .mono {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+    }
+    
+    .pct-cell {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    
+    .pct-bar-track {
+      width: 80px;
+      height: 4px;
+      background: #1e293b;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    
+    .pct-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+    }
+    
+    .over-tag {
+      font-size: 9px;
+      font-weight: 700;
+      color: #f87171;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+      border-radius: 3px;
+      padding: 1px 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-left: 6px;
+    }
+    
+    td.contracted {
+      color: #60a5fa !important;
+    }
+    
+    td.used {
+      color: #34d399 !important;
+    }
+    
+    td.remaining-pos {
+      color: #c084fc !important;
+    }
+    
+    td.remaining-neg {
+      color: #f87171 !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>MgS — Client Hours Report</h1>
+      <p>Sheet: clientHours · Datos al 24 de abril 2026</p>
+    </div>
+    <span class="badge">APRIL 2026</span>
+  </div>
+  
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Total Contratadas</div>
+      <div class="stat-value" style="color: #3b82f6;">1,544<span style="font-size:14px;color:#475569;">h</span></div>
+      <div class="stat-sub">todas las cuentas</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Horas Usadas</div>
+      <div class="stat-value" style="color: #10b981;">1,336.25<span style="font-size:14px;color:#475569;">h</span></div>
+      <div class="stat-sub">86.56% del total</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Horas Restantes</div>
+      <div class="stat-value" style="color: #8b5cf6;">84.5<span style="font-size:14px;color:#475569;">h</span></div>
+      <div class="stat-sub">clientes dentro presupuesto</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Clientes Excedidos</div>
+      <div class="stat-value" style="color: #ef4444;">3</div>
+      <div class="stat-sub">necesitan revisión</div>
+      <div class="alert-chip">⚠ REVISAR</div>
+    </div>
+  </div>
+  
+  <div class="chart-section">
+    <div class="section-header">
+      <span class="section-title">Horas por Cliente (Contracted vs Used vs Remaining)</span>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div>Contratadas</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div>Usadas</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#8b5cf6"></div>Restantes</div>
+      </div>
+    </div>
+    <div class="chart-wrapper">
+      <canvas id="mainChart"></canvas>
+    </div>
+  </div>
+  
+  <div class="table-section">
+    <div class="section-header" style="padding: 18px 20px 0;">
+      <span class="section-title">Detalle de Clientes</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Cliente</th>
+          <th>Contratadas</th>
+          <th>Usadas</th>
+          <th>Restantes</th>
+          <th>% Usado</th>
+        </tr>
+      </thead>
+      <tbody id="clientTableBody">
+      </tbody>
+    </table>
+  </div>
+  
+  <script>
+    const clientData = [
+      { name: 'Tishman Studio', contracted: 292, used: 266, remaining: 26, percent: 91.10 },
+      { name: 'MgS-Marketing', contracted: 150, used: 71.25, remaining: 78.75, percent: 47.50 },
+      { name: 'MgS-Parkland', contracted: 150, used: 68, remaining: 82, percent: 45.33 },
+      { name: 'MgS-Star Trek', contracted: 50, used: 57.5, remaining: -7.5, percent: 115.00 },
+      { name: 'Tiny Blue Dot', contracted: 20, used: 17.25, remaining: 2.75, percent: 86.25 },
+      { name: 'MgS-Black & Veatch', contracted: 80, used: 87.5, remaining: -7.5, percent: 109.38 },
+      { name: 'Tishman-Corporate', contracted: 53, used: 86, remaining: -33, percent: 162.26 },
+      { name: 'Kraft Heinz - AFH', contracted: 100, used: 10, remaining: 90, percent: 10.00 },
+      { name: 'MgS-Alltech', contracted: 50, used: 39.75, remaining: 10.25, percent: 79.50 },
+      { name: 'MgS - Azek', contracted: 18, used: 0, remaining: 18, percent: 0.00 },
+      { name: 'BV', contracted: 80, used: 0, remaining: 80, percent: 0.00 },
+      { name: 'EF Tours', contracted: 50, used: 0, remaining: 50, percent: 0.00 },
+      { name: 'MgS-WAMI', contracted: 120, used: 0, remaining: 120, percent: 0.00 },
+      { name: 'MgS-Focus Features', contracted: 50, used: 0, remaining: 50, percent: 0.00 },
+      { name: 'MgS-UPAH', contracted: 50, used: 0, remaining: 50, percent: 0.00 }
+    ];
+    
+    // Filter for chart (exclude zero contracted)
+    const chartData = clientData.filter(c => c.contracted > 0 || c.used > 0);
+    
+    // Populate table
+    const tbody = document.getElementById('clientTableBody');
+    clientData.forEach(client => {
+      if (client.contracted === 0 && client.used === 0) return;
+      
+      const row = document.createElement('tr');
+      const remainingValue = client.remaining;
+      const isOverBudget = remainingValue < 0;
+      const remainingClass = isOverBudget ? 'remaining-neg' : 'remaining-pos';
+      
+      let percentColor = '#10b981';
+      if (client.percent > 100) percentColor = '#ef4444';
+      else if (client.percent >= 85) percentColor = '#f59e0b';
+      else if (client.percent > 0) percentColor = '#10b981';
+      else percentColor = '#475569';
+      
+      row.innerHTML = `
+        <td>${client.name}</td>
+        <td class="mono contracted">${client.contracted.toFixed(2)}</td>
+        <td class="mono used">${client.used.toFixed(2)}</td>
+        <td class="mono ${remainingClass}">${Math.abs(remainingValue).toFixed(2)}${isOverBudget ? ' <span class="over-tag">EXCEDIDO</span>' : ''}</td>
+        <td>
+          <div class="pct-cell">
+            <div class="pct-bar-track">
+              <div class="pct-bar-fill" style="width:${Math.min(client.percent, 100)}%; background:${percentColor};"></div>
+            </div>
+            <span class="mono" style="color:${percentColor}; min-width:42px;">${client.percent.toFixed(1)}%</span>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(row);
+    });
+    
+    // Create chart
+    const ctx = document.getElementById('mainChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: chartData.map(c => c.name),
+        datasets: [
+          {
+            label: 'Contratadas',
+            data: chartData.map(c => c.contracted),
+            backgroundColor: '#3b82f6',
+            borderRadius: 4
+          },
+          {
+            label: 'Usadas',
+            data: chartData.map(c => c.used),
+            backgroundColor: '#10b981',
+            borderRadius: 4
+          },
+          {
+            label: 'Restantes / Excedente',
+            data: chartData.map(c => Math.abs(c.remaining)),
+            backgroundColor: chartData.map(c => c.remaining < 0 ? '#ef4444' : '#8b5cf6'),
+            borderRadius: 4
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#131b2e',
+            borderColor: '#1e293b',
+            borderWidth: 1,
+            titleColor: '#f1f5f9',
+            bodyColor: '#94a3b8',
+            padding: 10
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: '#0f172a' },
+            ticks: { color: '#475569', font: { size: 10 } }
+          },
+          y: {
+            grid: { color: '#1e293b' },
+            ticks: { 
+              color: '#475569',
+              font: { size: 10 },
+              callback: v => v + 'h'
+            }
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>
