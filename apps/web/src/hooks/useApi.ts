@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { fetchApi } from '../services/api';
 
 export function useApi<T>(path: string) {
@@ -6,7 +6,7 @@ export function useApi<T>(path: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     let cancelled = false;
 
     setLoading(true);
@@ -28,5 +28,9 @@ export function useApi<T>(path: string) {
     };
   }, [path]);
 
-  return { data, loading, error };
+  useEffect(() => {
+    return load();
+  }, [load]);
+
+  return { data, loading, error, refetch: load };
 }

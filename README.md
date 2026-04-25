@@ -17,8 +17,11 @@ Time-tracking reporting system migrated from Google Sheets to a production-grade
 mgs-clients/
 ├── apps/
 │   ├── api/                        # NestJS backend
+│   │   ├── Dockerfile              # Multi-stage Docker build for Koyeb
+│   │   ├── Procfile                # Koyeb buildpack entrypoint
 │   │   └── src/
 │   │       ├── modules/
+│   │       │   ├── health/         # GET /health (cold start check)
 │   │       │   ├── projects/       # Project CRUD + budget
 │   │       │   ├── developers/     # Developer management
 │   │       │   ├── worklogs/       # Worklog CRUD
@@ -27,14 +30,15 @@ mgs-clients/
 │   │       └── prisma/             # PrismaService (injectable)
 │   │
 │   └── web/                        # React frontend
+│       ├── vercel.json             # SPA rewrites for Vercel
 │       └── src/
 │           ├── components/
-│           │   ├── ui/             # StatCard, ClientTable, Skeleton
+│           │   ├── ui/             # StatCard, ClientTable, Skeleton, ColdStartBanner
 │           │   ├── charts/         # ClientHoursChart (react-chartjs-2)
-│           │   └── layout/         # Header
+│           │   └── layout/         # AppShell, NavTabs, MonthPicker
 │           ├── pages/              # Dashboard, DeveloperReport
-│           ├── hooks/              # useApi
-│           └── services/           # API client
+│           ├── hooks/              # useApi, useMonth, useConnectionStatus
+│           └── services/           # API client (retry + cold start detection)
 │
 ├── packages/
 │   ├── db/                         # Prisma schema + generated client
@@ -207,3 +211,27 @@ Fonts: **DM Sans** (body), **Space Mono** (numbers, labels, badges).
 - Month stored in URL query param (`?month=`) rather than React state — enables shareable links and browser back/forward navigation
 - Horizontal stacked bars for developer chart (vs vertical grouped bars for client chart) — better readability with long developer names
 - NavLink active detection via React Router — no custom state management needed
+
+### Phase 4 — Frontend ↔ Backend Integration, Cold Start UX, Deploy Configs ✅
+
+**Scope**: Wire frontend to live API with production-grade resilience for Koyeb free-tier cold starts. Deploy configurations for Vercel + Koyeb.
+
+**Delivered**:
+- **Health Endpoint**: `GET /health` returns `{ status: "ok", timestamp }` — used for connection checks and uptime monitoring. `HealthModule` registered in `AppModule`.
+- **Retry Logic with Exponential Backoff**: `fetchApi<T>()` retries up to 3 times on network/timeout errors with 2s → 4s → 8s backoff. 30-second `AbortSignal` timeout per request. Non-network errors (4xx/5xx) are not retried.
+- **Cold Start Event System**: Pub/sub pattern via `onColdStartChange()` — components can subscribe to `'waking' | 'ready' | 'failed'` transitions. Global `apiReady` flag prevents redundant "ready" notifications.
+- **`useConnectionStatus` Hook**: Reactive hook subscribing to cold-start events. Returns `'connecting' | 'ready' | 'waking' | 'failed'`.
+- **Cold Start Banner**: Fixed-position animated banner at top of viewport — amber "Waking up the server..." during cold start with spinner, red error banner on connection failure. Uses `backdrop-blur-sm` for glass effect.
+- **`useApi` Refetch**: Hook now exposes `refetch()` callback alongside `data`, `loading`, `error`.
+- **Vercel Config**: `vercel.json` with SPA catch-all rewrite (`/(.*) → /index.html`) for React Router client-side routing.
+- **Koyeb Dockerfile**: Multi-stage build — installs workspace dependencies, generates Prisma client, builds shared/db/api packages, then copies only production artifacts to slim final image. Exposes port 3001.
+- **Procfile**: `web: node dist/main.js` for Koyeb buildpack deployments.
+- **Environment Variables**: `.env.example` updated with production-ready comments — `CORS_ORIGIN` for Vercel domain, `VITE_API_URL` for Koyeb API URL.
+- **Production Build**: Vite build passes — 61 modules, 397KB JS (130KB gzipped), 15KB CSS (3.8KB gzipped).
+
+**Key decisions**:
+- Exponential backoff (2s base) chosen to match Koyeb cold start timing (10-30s typical) — 3 retries covers up to ~14s of downtime before final attempt
+- Cold start banner is a global overlay (not per-component) — avoids duplicate notifications and provides consistent UX
+- Pub/sub pattern for cold start events (not React context) — allows non-React code (e.g., `fetchApi`) to publish state without coupling to component tree
+- Dockerfile uses multi-stage build to minimize image size — final stage only includes compiled JS + node_modules
+- SPA rewrite in `vercel.json` instead of hash routing — clean URLs with proper deep-link support

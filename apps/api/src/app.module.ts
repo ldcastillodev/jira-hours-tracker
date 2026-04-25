@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
+import { HealthModule } from './modules/health/health.module';
 import { ProjectsModule } from './modules/projects/projects.module';
 import { DevelopersModule } from './modules/developers/developers.module';
 import { WorklogsModule } from './modules/worklogs/worklogs.module';
@@ -11,6 +12,7 @@ import { JiraSyncModule } from './modules/jira-sync/jira-sync.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
+    HealthModule,
     ProjectsModule,
     DevelopersModule,
     WorklogsModule,

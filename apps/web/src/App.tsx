@@ -2,10 +2,12 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Dashboard } from './pages/Dashboard';
 import { DeveloperReport } from './pages/DeveloperReport';
 import { AppShell } from './components/layout/AppShell';
+import { ColdStartBanner } from './components/ui/ColdStartBanner';
 
 export default function App() {
   return (
     <BrowserRouter>
+      <ColdStartBanner />
       <AppShell>
         <Routes>
           <Route path="/" element={<Dashboard />} />
