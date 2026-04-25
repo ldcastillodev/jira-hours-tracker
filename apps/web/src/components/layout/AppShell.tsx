@@ -3,6 +3,7 @@ import { NavLink, useSearchParams, useLocation } from 'react-router-dom';
 import { MonthPicker } from './MonthPicker';
 import { mutateApi } from '../../services/api';
 import { showToast } from '../ui/Toast';
+import { useTheme } from '../../hooks/useTheme';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [searchParams] = useSearchParams();
@@ -16,7 +17,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <nav className="border-b border-mgs-border bg-mgs-card-alt px-7 py-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-6">
-            <span className="font-mono text-sm font-bold tracking-tight text-[#f8fafc]">
+            <span className="font-mono text-sm font-bold tracking-tight text-mgs-text">
               MgS
             </span>
             <div className="flex gap-1">
@@ -26,6 +27,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             <SyncButton />
             {!isManage && <MonthPicker />}
           </div>
@@ -92,6 +94,18 @@ function SyncButton() {
         </svg>
       )}
       {syncing ? 'Syncing...' : 'Sync Jira'}
+    </button>
+  );
+}
+
+function ThemeToggle() {
+  const { theme, toggleTheme } = useTheme();
+  return (
+    <button
+      onClick={toggleTheme}
+      className="flex items-center gap-1.5 rounded-lg border border-mgs-border bg-mgs-card px-3 py-1.5 font-mono text-xs text-mgs-text-dim transition-colors hover:border-mgs-text-dim hover:text-mgs-text-muted"
+    >
+      {theme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode'}
     </button>
   );
 }

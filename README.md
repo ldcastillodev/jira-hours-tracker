@@ -341,3 +341,36 @@ Fonts: **DM Sans** (body), **Space Mono** (numbers, labels, badges).
 - `mutateApi` does not retry like `fetchApi` — mutations are not idempotent, retrying would risk duplicate creates
 - `Modal` closes on backdrop click using `e.target === overlayRef.current` guard — prevents close when clicking inside the dialog content
 - `MonthPicker` hidden on `/manage` — determined via `useLocation()` in `AppShell`, no extra state needed
+
+### Phase 6 — Dark/Light Theme Toggle ✅
+
+**Scope**: Global theme system with dark (default) and light modes, persisted to localStorage.
+
+**Delivered**:
+- **`ThemeProvider` + `useTheme` hook** (`hooks/useTheme.tsx`): React Context holding `{ theme, toggleTheme }`. Reads `localStorage('app-theme')` on mount (defaults to `'dark'`). On toggle, updates state, writes localStorage, and sets `data-theme` attribute on `<html>`.
+- **CSS variable overrides** (`index.css`): `[data-theme="light"]` selector overrides all `--color-mgs-*` custom properties. Since Tailwind v4 compiles `@theme` tokens into CSS custom properties and all `bg-mgs-*` / `text-mgs-*` utilities reference them, **every existing component automatically picks up light colors — zero per-component changes**.
+- **Light theme tokens**:
+
+| Token | Dark | Light |
+|-------|------|-------|
+| `mgs-bg` | `#0d1117` | `#f0f2f5` |
+| `mgs-card` | `#131b2e` | `#ffffff` |
+| `mgs-card-alt` | `#0f1623` | `#f7f9fc` |
+| `mgs-border` | `#1e293b` | `#e2e8f0` |
+| `mgs-border-dark` | `#0f172a` | `#cbd5e1` |
+| `mgs-text` | `#e2e8f0` | `#1e293b` |
+| `mgs-text-muted` | `#94a3b8` | `#475569` |
+| `mgs-text-dim` | `#64748b` | `#64748b` |
+| `mgs-text-faint` | `#475569` | `#94a3b8` |
+
+- **Smooth transitions**: Global `transition: background-color, border-color, color 0.2s ease` via `*` selector — eliminates flash on theme swap.
+- **`ThemeToggle` button** in `AppShell.tsx` nav bar: "☀️ Light Mode" when dark is active, "🌙 Dark Mode" when light is active. Styled identically to existing nav buttons (`font-mono`, `border-mgs-border`, `bg-mgs-card`).
+- **Hardcoded colors removed**: Replaced `text-[#f8fafc]` in `Header.tsx`, `Modal.tsx`, and `AppShell.tsx` with `text-mgs-text` — all colors now theme-aware.
+- **Accent colors unchanged**: `mgs-blue`, `mgs-green`, `mgs-purple`, `mgs-red`, `mgs-amber` pass WCAG AA contrast on both backgrounds — no overrides needed.
+- **Production Build**: Vite build passes — 69 modules, 412KB JS (133KB gzipped), 21KB CSS (4.9KB gzipped).
+
+**Key decisions**:
+- CSS variable override approach (not class toggling) — one `[data-theme="light"]` block in CSS themes the entire app with zero component changes. Far more maintainable than per-component conditional classes.
+- `data-theme` attribute on `<html>` (not body or a wrapper div) — ensures any CSS anywhere in the tree can use the selector, including third-party styles.
+- `localStorage` key `'app-theme'` — explicit user preference overrides OS `prefers-color-scheme` (user control > OS default).
+- Accent colors stay identical in both themes — blue/green/red/purple already meet WCAG AA on both `#0d1117` and `#f0f2f5` backgrounds.

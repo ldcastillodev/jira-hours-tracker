@@ -34,3 +34,25 @@
     transform: translateX(0);
   }
 }
+
+/* Light theme — overrides CSS vars used by all mgs-* Tailwind utilities */
+[data-theme="light"] {
+  --color-mgs-bg: #f0f2f5;
+  --color-mgs-card: #ffffff;
+  --color-mgs-card-alt: #f7f9fc;
+  --color-mgs-border: #e2e8f0;
+  --color-mgs-border-dark: #cbd5e1;
+  --color-mgs-text: #1e293b;
+  --color-mgs-text-muted: #475569;
+  --color-mgs-text-dim: #64748b;
+  --color-mgs-text-faint: #94a3b8;
+}
+
+/* Smooth transitions on theme swap */
+*,
+*::before,
+*::after {
+  transition-property: background-color, border-color, color;
+  transition-duration: 0.2s;
+  transition-timing-function: ease;
+}
