@@ -33,10 +33,11 @@ mgs-clients/
 │       ├── vercel.json             # SPA rewrites for Vercel
 │       └── src/
 │           ├── components/
-│           │   ├── ui/             # StatCard, ClientTable, Skeleton, ColdStartBanner
+│           │   ├── ui/             # StatCard, ClientTable, Skeleton, ColdStartBanner, Modal, Toast
 │           │   ├── charts/         # ClientHoursChart (react-chartjs-2)
+│           │   ├── manage/         # DeveloperPanel, ProjectPanel, DeveloperForm, ProjectForm
 │           │   └── layout/         # AppShell, NavTabs, MonthPicker
-│           ├── pages/              # Dashboard, DeveloperReport
+│           ├── pages/              # Dashboard, DeveloperReport, Manage
 │           ├── hooks/              # useApi, useMonth, useConnectionStatus
 │           └── services/           # API client (retry + cold start detection)
 │
@@ -160,6 +161,8 @@ Three core models replicate the Google Sheets structure:
 | `GET` | `/projects/:id` | Get single project with children + parent |
 | `POST` | `/projects` | Create project (`name`, `monthlyBudget?`, `parentId?`) |
 | `PUT` | `/projects/:id` | Update project fields |
+| `PATCH` | `/projects/:id` | Partial update project fields |
+| `DELETE` | `/projects/:id` | Delete project (409 if has worklogs or children) |
 
 ### Developers
 | Method | Path | Description |
@@ -168,6 +171,8 @@ Three core models replicate the Google Sheets structure:
 | `GET` | `/developers/:id` | Get single developer |
 | `POST` | `/developers` | Create developer (`name`, `email`, `jiraAccountId?`, `slackId?`) |
 | `PUT` | `/developers/:id` | Update developer fields |
+| `PATCH` | `/developers/:id` | Partial update developer fields |
+| `DELETE` | `/developers/:id` | Delete developer (409 if has worklogs) |
 
 ### Worklogs
 | Method | Path | Description |
@@ -302,3 +307,37 @@ Fonts: **DM Sans** (body), **Space Mono** (numbers, labels, badges).
 - Pub/sub pattern for cold start events (not React context) — allows non-React code (e.g., `fetchApi`) to publish state without coupling to component tree
 - Dockerfile uses multi-stage build to minimize image size — final stage only includes compiled JS + node_modules
 - SPA rewrite in `vercel.json` instead of hash routing — clean URLs with proper deep-link support
+
+### Phase 5 — Manage Dashboard + Jira Sync Button ✅
+
+**Scope**: Full CRUD management UI for developers and projects, plus a Jira Sync trigger button in the nav bar.
+
+**Delivered**:
+
+**Backend (Phase A)**
+- **DELETE endpoints**: `DELETE /developers/:id` and `DELETE /projects/:id` — both verify existence via `findOne()` guard before deleting. FK constraint violations (developer with worklogs, project with worklogs or children) return **409 Conflict** with a descriptive message instead of cascading.
+- **PATCH endpoints**: `PATCH /developers/:id` and `PATCH /projects/:id` — alias for existing `PUT` update logic. All fields optional, follows existing inline-type pattern (no `class-validator` DTOs).
+
+**Frontend (Phase B)**
+- **`mutateApi<T>(path, method, body?)`**: New helper in `services/api.ts` for POST/PATCH/PUT/DELETE mutations. Parses NestJS error message from JSON response body for user-friendly error display.
+- **`Modal`** (`components/ui/Modal.tsx`): Reusable dark-themed overlay. Closes on backdrop click or Escape key. Uses existing `mgs-card` / `mgs-border` tokens.
+- **`ToastContainer` + `showToast()`** (`components/ui/Toast.tsx`): Global auto-dismiss notifications (3.5s). Callback-based (`showToast()` can be called from anywhere without React context). Green success / red error variants with slide-in animation.
+- **`DeveloperPanel`** (`components/manage/DeveloperPanel.tsx`): Table listing all developers (name, email, Jira ID, Slack ID). Add, edit, and delete per row. Delete requires confirmation modal before API call.
+- **`ProjectPanel`** (`components/manage/ProjectPanel.tsx`): Table listing all projects (name, monthly budget). Same CRUD pattern as DeveloperPanel.
+- **`DeveloperForm`** (`components/manage/DeveloperForm.tsx`): Create/edit form with fields name, email, jiraAccountId, slackId. Dual-use (pre-populated for edit). Loading state on submit, inline error display.
+- **`ProjectForm`** (`components/manage/ProjectForm.tsx`): Create/edit form with fields name, monthlyBudget. Same pattern.
+- **`Manage` page** (`pages/Manage.tsx`): Two-panel layout (Developers + Projects). Uses `useApi` for data fetching with `TableSkeleton` while loading.
+- **Routing**: `/manage` route added to `App.tsx`. "Manage" NavTab added to nav bar. `MonthPicker` is hidden on the `/manage` route (not relevant for CRUD).
+- **`ToastContainer`** mounted in `App.tsx` at root level — single instance for the whole app.
+
+**Frontend (Phase C)**
+- **`SyncButton`** in `AppShell.tsx` nav bar: Calls `POST /jira-sync/trigger`. Shows animated spinner while request is in flight. Button is disabled during sync to prevent double-triggers. Shows success or error toast on completion. Uses same SVG spinner pattern as `ColdStartBanner`.
+
+**Production Build**: Vite build passes — 68 modules, 412KB JS (133KB gzipped), 21KB CSS (4.8KB gzipped).
+
+**Key decisions**:
+- DELETE returns 409 Conflict on FK constraint (not cascade) — safer for production data; user sees a clear error message
+- `showToast()` is a plain function (not a hook or context) — can be called from async event handlers and panel components without prop drilling
+- `mutateApi` does not retry like `fetchApi` — mutations are not idempotent, retrying would risk duplicate creates
+- `Modal` closes on backdrop click using `e.target === overlayRef.current` guard — prevents close when clicking inside the dialog content
+- `MonthPicker` hidden on `/manage` — determined via `useLocation()` in `AppShell`, no extra state needed

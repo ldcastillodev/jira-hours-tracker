@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -45,5 +45,20 @@ export class ProjectsService {
         parentId: data.parentId,
       },
     });
+  }
+
+  async delete(id: string) {
+    await this.findOne(id);
+    try {
+      await this.prisma.project.delete({ where: { id } });
+      return { deleted: true };
+    } catch (err: any) {
+      if (err.code === 'P2003') {
+        throw new ConflictException(
+          'Cannot delete project with existing worklogs or child projects',
+        );
+      }
+      throw err;
+    }
   }
 }

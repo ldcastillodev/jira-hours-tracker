@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -37,5 +37,20 @@ export class DevelopersService {
   ) {
     await this.findOne(id);
     return this.prisma.developer.update({ where: { id }, data });
+  }
+
+  async delete(id: string) {
+    await this.findOne(id);
+    try {
+      await this.prisma.developer.delete({ where: { id } });
+      return { deleted: true };
+    } catch (err: any) {
+      if (err.code === 'P2003') {
+        throw new ConflictException(
+          'Cannot delete developer with existing worklogs',
+        );
+      }
+      throw err;
+    }
   }
 }

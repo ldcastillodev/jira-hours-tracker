@@ -72,3 +72,31 @@ export async function checkHealth(): Promise<boolean> {
     return false;
   }
 }
+
+export async function mutateApi<T = unknown>(
+  path: string,
+  method: 'POST' | 'PATCH' | 'PUT' | 'DELETE',
+  body?: unknown,
+): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method,
+    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+    signal: AbortSignal.timeout(30_000),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => res.statusText);
+    let message = `API error: ${res.status}`;
+    try {
+      const json = JSON.parse(text);
+      message = json.message || message;
+    } catch {
+      if (text) message = text;
+    }
+    throw new Error(message);
+  }
+
+  const text = await res.text();
+  return text ? JSON.parse(text) : ({} as T);
+}
