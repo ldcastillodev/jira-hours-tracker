@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import type { ClientHoursSummaryDto, MonthReportDto } from '@mgs/shared';
+import type {
+  ClientHoursSummaryDto,
+  MonthReportDto,
+  ClientSummaryDto,
+  DailySheetDto,
+} from '@mgs/shared';
 
 @Injectable()
 export class ReportsService {
@@ -98,6 +103,58 @@ export class ReportsService {
       totalBillable: developers.reduce((s, d) => s + d.billableHours, 0),
       totalNonBillable: developers.reduce((s, d) => s + d.nonBillableHours, 0),
       totalHours: developers.reduce((s, d) => s + d.totalHours, 0),
+    };
+  }
+
+  async getClientSummary(month?: string): Promise<ClientSummaryDto> {
+    const dateFilter = month ? this.buildMonthFilter(month) : {};
+    const resolvedMonth = month || this.currentMonth();
+
+    // Components = projects with a parentId (children)
+    const components = await this.prisma.project.findMany({
+      where: { parentId: { not: null } },
+      include: {
+        parent: true,
+        worklogs: { where: dateFilter },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    return {
+      month: resolvedMonth,
+      components: components.map((c) => ({
+        projectId: c.id,
+        projectName: c.name,
+        parentProjectName: c.parent?.name ?? null,
+        totalHours: c.worklogs.reduce((sum, w) => sum + Number(w.hours), 0),
+      })),
+    };
+  }
+
+  async getDailySheet(date: string): Promise<DailySheetDto> {
+    const day = new Date(date);
+    const nextDay = new Date(day);
+    nextDay.setDate(nextDay.getDate() + 1);
+
+    const worklogs = await this.prisma.worklog.findMany({
+      where: {
+        date: { gte: day, lt: nextDay },
+      },
+      include: {
+        developer: true,
+        project: true,
+      },
+      orderBy: [{ developer: { name: 'asc' } }, { project: { name: 'asc' } }],
+    });
+
+    return {
+      date,
+      entries: worklogs.map((w) => ({
+        developerId: w.developerId,
+        developerName: w.developer.name,
+        componentName: w.project.name,
+        hours: Number(w.hours),
+      })),
     };
   }
 

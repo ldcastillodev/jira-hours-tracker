@@ -14,4 +14,14 @@ export class ReportsController {
   getDeveloperWorkload(@Query('month') month?: string) {
     return this.reportsService.getDeveloperWorkload(month);
   }
+
+  @Get('client-summary')
+  getClientSummary(@Query('month') month?: string) {
+    return this.reportsService.getClientSummary(month);
+  }
+
+  @Get('daily')
+  getDailySheet(@Query('date') date: string) {
+    return this.reportsService.getDailySheet(date);
+  }
 }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -11,6 +11,58 @@ export class WorklogsService {
       where,
       include: { project: true, developer: true },
       orderBy: { date: 'desc' },
+    });
+  }
+
+  async findOne(id: string) {
+    const worklog = await this.prisma.worklog.findUnique({
+      where: { id },
+      include: { project: true, developer: true },
+    });
+    if (!worklog) throw new NotFoundException(`Worklog ${id} not found`);
+    return worklog;
+  }
+
+  create(data: {
+    date: string;
+    hours: number;
+    isBillable?: boolean;
+    projectId: string;
+    developerId: string;
+    jiraIssueId?: string;
+  }) {
+    return this.prisma.worklog.create({
+      data: {
+        date: new Date(data.date),
+        hours: data.hours,
+        isBillable: data.isBillable ?? true,
+        projectId: data.projectId,
+        developerId: data.developerId,
+        jiraIssueId: data.jiraIssueId,
+      },
+    });
+  }
+
+  async update(
+    id: string,
+    data: {
+      date?: string;
+      hours?: number;
+      isBillable?: boolean;
+      projectId?: string;
+      developerId?: string;
+    },
+  ) {
+    await this.findOne(id);
+    return this.prisma.worklog.update({
+      where: { id },
+      data: {
+        ...(data.date && { date: new Date(data.date) }),
+        ...(data.hours !== undefined && { hours: data.hours }),
+        ...(data.isBillable !== undefined && { isBillable: data.isBillable }),
+        ...(data.projectId && { projectId: data.projectId }),
+        ...(data.developerId && { developerId: data.developerId }),
+      },
     });
   }
 
