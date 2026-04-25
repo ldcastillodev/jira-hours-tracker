@@ -87,6 +87,89 @@ Resultado: `{ projects: 3, components: 6, developers: 4, worklogs: 258 }`
 
 ---
 
+---
+
+## Refactor #2 — `ticketKey` + `assigned` (Abril 2026)
+
+### Objetivo
+Desacoplar Worklog de las IDs internas de Jira. En lugar de guardar el ID numérico del issue (`jiraIssueId`) y el account ID del autor (`jiraAccountId`), se usa:
+
+- **`ticketKey`** — clave legible del ticket (ej. `MGS-123`), globalmente única por row.
+- **`assigned`** — email del developer que registró el log (string plano, no FK).
+- Se elimina `Developer.jiraAccountId` por completo.
+
+### Cambios en el schema
+
+**Developer** — eliminado `jiraAccountId`:
+```prisma
+model Developer {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  slackId   String?  @unique @map("slack_id")
+  ...
+}
+```
+
+**Worklog** — `jiraIssueId` + `jiraAccountId` → `ticketKey` + `assigned`:
+```prisma
+model Worklog {
+  id          Int       @id @default(autoincrement())
+  hours       Float
+  date        DateTime  @db.Date
+  ticketKey   String    @unique @map("ticket_key")
+  assigned    String
+  componentId Int       @map("component_id")
+  ...
+  @@index([componentId, date])
+  @@index([assigned, date])
+}
+```
+
+### Comandos ejecutados
+
+```bash
+# Reset de la DB (re-aplica la migración base)
+npx prisma migrate reset --force --schema=packages/db/prisma/schema.prisma
+
+# Nueva migración con los cambios
+npx prisma migrate dev --name "refactor_worklog_assigned" --schema=packages/db/prisma/schema.prisma
+
+# Seed
+cd packages/db && npx ts-node prisma/seed.ts
+```
+
+Migración generada en:
+```
+packages/db/prisma/migrations/20260425174355_refactor_worklog_assigned/migration.sql
+```
+
+Resultado del seed: `{ projects: 3, components: 6, developers: 4, worklogs: 268 }`
+
+### Archivos modificados
+
+| Archivo | Qué cambió |
+|---------|-----------|
+| `packages/db/prisma/schema.prisma` | Eliminado `jiraAccountId` de Developer; reemplazados `jiraIssueId`/`jiraAccountId` por `ticketKey`/`assigned` en Worklog |
+| `packages/db/prisma/seed.ts` | Developers sin `jiraAccountId`; worklogs usan `ticketKey: \`seed-wl-${n}\`` + `assigned: dev.email` |
+| `apps/api/src/modules/jira-sync/jira-sync.service.ts` | Lookup de developer por `email` (no accountId); upsert por `ticketKey: issue.key`; eliminado `console.log` de debug |
+| `apps/api/src/modules/reports/reports.service.ts` | `getDeveloperWorkload` y `getDailySheet` agrupan/mapean por `w.assigned`/`d.email` |
+| `apps/api/src/modules/worklogs/worklogs.service.ts` | `create()` usa `ticketKey` + `assigned` |
+| `apps/api/src/modules/worklogs/worklogs.controller.ts` | Body type actualizado |
+| `apps/api/src/modules/developers/developers.service.ts` | Eliminado `jiraAccountId` de `create()` y `update()` |
+| `apps/api/src/modules/developers/developers.controller.ts` | Eliminado `jiraAccountId` de todos los body types |
+| `apps/web/src/components/manage/DeveloperForm.tsx` | Eliminado campo Jira Account ID |
+| `apps/web/src/components/manage/DeveloperPanel.tsx` | Eliminada columna "Jira ID" de la tabla |
+| `apps/web/src/pages/Manage.tsx` | Eliminado `jiraAccountId` de la interfaz `Developer` |
+
+### Decisiones de diseño
+
+- `ticketKey` es `@unique` — un ticket Jira = un row en Worklog.
+- Si `author.emailAddress` del worklog de Jira no coincide con ningún `Developer.email` → el worklog se **skipea** con un `logger.warn`.
+- `Worklog.assigned` es un `String` plano, **no FK** — el join con Developer se hace por email en los servicios de reportes.
+
+---
+
 ## Cómo resetear de nuevo (si hace falta)
 
 ```bash

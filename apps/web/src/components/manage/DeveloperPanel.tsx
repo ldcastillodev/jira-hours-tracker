@@ -8,7 +8,6 @@ interface Developer {
   id: number;
   name: string;
   email: string;
-  jiraAccountId: string;
   slackId: string | null;
 }
 
@@ -36,7 +35,6 @@ export function DeveloperPanel({ developers, onRefresh }: DeveloperPanelProps) {
   async function handleSubmit(data: {
     name: string;
     email: string;
-    jiraAccountId?: string | null;
     slackId?: string | null;
   }) {
     if (editing) {
@@ -85,7 +83,6 @@ export function DeveloperPanel({ developers, onRefresh }: DeveloperPanelProps) {
             <tr className="border-b border-mgs-border">
               <Th>Name</Th>
               <Th>Email</Th>
-              <Th>Jira ID</Th>
               <Th>Slack ID</Th>
               <Th className="w-24 text-right">Actions</Th>
             </tr>
@@ -95,7 +92,6 @@ export function DeveloperPanel({ developers, onRefresh }: DeveloperPanelProps) {
               <tr key={dev.id} className="border-b border-mgs-border/50 last:border-0">
                 <td className="px-4 py-3 font-medium text-mgs-text">{dev.name}</td>
                 <td className="px-4 py-3 text-mgs-text-muted">{dev.email}</td>
-                <td className="px-4 py-3 font-mono text-mgs-text-dim">{dev.jiraAccountId || '—'}</td>
                 <td className="px-4 py-3 font-mono text-mgs-text-dim">{dev.slackId || '—'}</td>
                 <td className="px-4 py-3 text-right">
                   <button
@@ -115,7 +111,7 @@ export function DeveloperPanel({ developers, onRefresh }: DeveloperPanelProps) {
             ))}
             {developers.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-mgs-text-dim">
+                <td colSpan={4} className="px-4 py-8 text-center text-mgs-text-dim">
                   No developers yet
                 </td>
               </tr>

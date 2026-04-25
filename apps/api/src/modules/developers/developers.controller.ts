@@ -21,7 +21,6 @@ export class DevelopersController {
     body: {
       name: string;
       email: string;
-      jiraAccountId: string;
       slackId?: string;
     },
   ) {
@@ -35,7 +34,6 @@ export class DevelopersController {
     body: {
       name?: string;
       email?: string;
-      jiraAccountId?: string;
       slackId?: string | null;
     },
   ) {
@@ -49,7 +47,6 @@ export class DevelopersController {
     body: {
       name?: string;
       email?: string;
-      jiraAccountId?: string;
       slackId?: string | null;
     },
   ) {

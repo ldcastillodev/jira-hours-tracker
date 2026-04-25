@@ -26,16 +26,16 @@ export class WorklogsService {
   create(data: {
     date: string;
     hours: number;
-    jiraIssueId: string;
-    jiraAccountId: string;
+    ticketKey: string;
+    assigned: string;
     componentId: number;
   }) {
     return this.prisma.worklog.create({
       data: {
         date: new Date(data.date),
         hours: data.hours,
-        jiraIssueId: data.jiraIssueId,
-        jiraAccountId: data.jiraAccountId,
+        ticketKey: data.ticketKey,
+        assigned: data.assigned,
         componentId: data.componentId,
       },
     });

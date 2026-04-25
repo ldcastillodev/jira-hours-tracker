@@ -20,7 +20,6 @@ export class DevelopersService {
   create(data: {
     name: string;
     email: string;
-    jiraAccountId: string;
     slackId?: string;
   }) {
     return this.prisma.developer.create({ data });
@@ -31,7 +30,6 @@ export class DevelopersService {
     data: {
       name?: string;
       email?: string;
-      jiraAccountId?: string;
       slackId?: string | null;
     },
   ) {

@@ -7,7 +7,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 interface JiraWorklog {
   id: string;
   issueId: string;
-  author: { accountId: string; displayName: string; emailAddress?: string };
+  author: { accountId: string; displayName: string; emailAddress: string };
   started: string;
   timeSpentSeconds: number;
 }
@@ -69,12 +69,7 @@ export class JiraSyncService {
     while (hasMore) {
       const jql = `component in (${components.map((c) => `"${c}"`).join(',')}) AND worklogDate >= "${since}"`;
       const url = `${baseUrl}/rest/api/3/search/jql`;
-      console.log({
-            jql,
-            startAt,
-            maxResults,
-            fields: 'worklog,components',
-          })
+
       const { data } = await firstValueFrom(
         this.httpService.get<JiraSearchResponse>(url, {
           headers,
@@ -106,7 +101,7 @@ export class JiraSyncService {
           const startedDate = new Date(wl.started);
           if (startedDate < new Date(since)) continue;
 
-          const result = await this.upsertWorklog(wl, componentName);
+          const result = await this.upsertWorklog(wl, componentName, issue.key);
           if (result === 'upserted') upsertedCount++;
           else skippedCount++;
           totalProcessed++;
@@ -160,6 +155,7 @@ export class JiraSyncService {
   private async upsertWorklog(
     wl: JiraWorklog,
     componentName: string,
+    issueKey: string,
   ): Promise<'upserted' | 'skipped'> {
     const component = await this.prisma.component.findUnique({
       where: { name: componentName },
@@ -172,14 +168,14 @@ export class JiraSyncService {
       return 'skipped';
     }
 
-    // Verify the developer exists
+    // Verify the developer exists by email
     const developer = await this.prisma.developer.findUnique({
-      where: { jiraAccountId: wl.author.accountId },
+      where: { email: wl.author.emailAddress },
     });
 
     if (!developer) {
-      this.logger.debug(
-        `Skipping worklog ${wl.id}: no developer for Jira account ${wl.author.accountId} (${wl.author.displayName})`,
+      this.logger.warn(
+        `Skipping worklog ${wl.id}: no developer with email ${wl.author.emailAddress} (${wl.author.displayName})`,
       );
       return 'skipped';
     }
@@ -189,16 +185,16 @@ export class JiraSyncService {
     date.setUTCHours(0, 0, 0, 0);
 
     await this.prisma.worklog.upsert({
-      where: { jiraIssueId: wl.id },
+      where: { ticketKey: issueKey },
       update: {
         hours,
         date,
       },
       create: {
-        jiraIssueId: wl.id,
+        ticketKey: issueKey,
         date,
         hours,
-        jiraAccountId: wl.author.accountId,
+        assigned: wl.author.emailAddress,
         componentId: component.id,
       },
     });

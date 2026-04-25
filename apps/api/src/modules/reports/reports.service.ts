@@ -62,9 +62,9 @@ export class ReportsService {
       include: { component: true },
     });
 
-    // Build a map of jiraAccountId -> developer name
+    // Build a map of email -> developer name
     const allDevs = await this.prisma.developer.findMany();
-    const devNameMap = new Map(allDevs.map((d) => [d.jiraAccountId, d.name]));
+    const devNameMap = new Map(allDevs.map((d) => [d.email, d.name]));
 
     const devMap = new Map<
       string,
@@ -72,7 +72,7 @@ export class ReportsService {
     >();
 
     for (const w of worklogs) {
-      const key = w.jiraAccountId;
+      const key = w.assigned;
       const entry = devMap.get(key) || {
         name: devNameMap.get(key) || key,
         billable: 0,
@@ -87,10 +87,10 @@ export class ReportsService {
     }
 
     // Resolve developer IDs
-    const devIdMap = new Map(allDevs.map((d) => [d.jiraAccountId, d.id]));
+    const devIdMap = new Map(allDevs.map((d) => [d.email, d.id]));
 
-    const developers = Array.from(devMap.entries()).map(([jiraAccId, d]) => ({
-      developerId: devIdMap.get(jiraAccId) ?? 0,
+    const developers = Array.from(devMap.entries()).map(([emailKey, d]) => ({
+      developerId: devIdMap.get(emailKey) ?? 0,
       developerName: d.name,
       billableHours: d.billable,
       nonBillableHours: d.nonBillable,
@@ -142,17 +142,17 @@ export class ReportsService {
       include: {
         component: true,
       },
-      orderBy: [{ jiraAccountId: 'asc' }, { component: { name: 'asc' } }],
+      orderBy: [{ assigned: 'asc' }, { component: { name: 'asc' } }],
     });
 
-    // Resolve developer names from jiraAccountId
+    // Resolve developer names from assigned email
     const allDevs = await this.prisma.developer.findMany();
-    const devNameMap = new Map(allDevs.map((d) => [d.jiraAccountId, d.name]));
+    const devNameMap = new Map(allDevs.map((d) => [d.email, d.name]));
 
     return {
       date,
       entries: worklogs.map((w) => ({
-        developerName: devNameMap.get(w.jiraAccountId) || w.jiraAccountId,
+        developerName: devNameMap.get(w.assigned) || w.assigned,
         componentName: w.component.name,
         hours: Number(w.hours),
       })),

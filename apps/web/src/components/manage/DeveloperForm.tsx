@@ -4,7 +4,6 @@ interface Developer {
   id: number;
   name: string;
   email: string;
-  jiraAccountId: string;
   slackId: string | null;
 }
 
@@ -13,7 +12,6 @@ interface DeveloperFormProps {
   onSubmit: (data: {
     name: string;
     email: string;
-    jiraAccountId?: string | null;
     slackId?: string | null;
   }) => Promise<void>;
   onCancel: () => void;
@@ -22,7 +20,6 @@ interface DeveloperFormProps {
 export function DeveloperForm({ initial, onSubmit, onCancel }: DeveloperFormProps) {
   const [name, setName] = useState(initial?.name ?? '');
   const [email, setEmail] = useState(initial?.email ?? '');
-  const [jiraAccountId, setJiraAccountId] = useState(initial?.jiraAccountId ?? '');
   const [slackId, setSlackId] = useState(initial?.slackId ?? '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +32,6 @@ export function DeveloperForm({ initial, onSubmit, onCancel }: DeveloperFormProp
       await onSubmit({
         name,
         email,
-        jiraAccountId: jiraAccountId || null,
         slackId: slackId || null,
       });
     } catch (err) {
@@ -57,9 +53,6 @@ export function DeveloperForm({ initial, onSubmit, onCancel }: DeveloperFormProp
       </Field>
       <Field label="Email" required>
         <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-      </Field>
-      <Field label="Jira Account ID">
-        <input value={jiraAccountId} onChange={(e) => setJiraAccountId(e.target.value)} />
       </Field>
       <Field label="Slack ID">
         <input value={slackId} onChange={(e) => setSlackId(e.target.value)} />

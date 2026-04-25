@@ -32,30 +32,29 @@ model Component {
 }
 
 model Developer {
-  id            Int      @id @default(autoincrement())
-  name          String
-  email         String   @unique
-  jiraAccountId String   @unique @map("jira_account_id")
-  slackId       String?  @unique @map("slack_id")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  slackId   String?  @unique @map("slack_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("developers")
 }
 
 model Worklog {
-  id            Int       @id @default(autoincrement())
-  hours         Float
-  date          DateTime  @db.Date
-  jiraIssueId   String    @unique @map("jira_issue_id")
-  jiraAccountId String    @map("jira_account_id")
-  componentId   Int       @map("component_id")
-  component     Component @relation(fields: [componentId], references: [id])
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  id          Int       @id @default(autoincrement())
+  hours       Float
+  date        DateTime  @db.Date
+  ticketKey   String    @unique @map("ticket_key")
+  assigned    String
+  componentId Int       @map("component_id")
+  component   Component @relation(fields: [componentId], references: [id])
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
   @@index([componentId, date])
-  @@index([jiraAccountId, date])
+  @@index([assigned, date])
   @@map("worklogs")
 }
 

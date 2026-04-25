@@ -44,16 +44,16 @@ async function main() {
 
   // --- Developers ---
   const devMaria = await prisma.developer.create({
-    data: { name: 'María López', email: 'maria@mgs.com', jiraAccountId: 'jira-maria-001' },
+    data: { name: 'María López', email: 'maria@mgs.com' },
   });
   const devCarlos = await prisma.developer.create({
-    data: { name: 'Carlos García', email: 'carlos@mgs.com', jiraAccountId: 'jira-carlos-002' },
+    data: { name: 'Carlos García', email: 'carlos@mgs.com' },
   });
   const devLuis = await prisma.developer.create({
-    data: { name: 'Luis Castillo', email: 'luis@mgs.com', jiraAccountId: 'jira-luis-003', slackId: 'U_LUIS' },
+    data: { name: 'Luis Castillo', email: 'luis@mgs.com', slackId: 'U_LUIS' },
   });
   const devAna = await prisma.developer.create({
-    data: { name: 'Ana Martínez', email: 'ana@mgs.com', jiraAccountId: 'jira-ana-004' },
+    data: { name: 'Ana Martínez', email: 'ana@mgs.com' },
   });
 
   const developers = [devMaria, devCarlos, devLuis, devAna];
@@ -64,10 +64,10 @@ async function main() {
   const month = now.getMonth();
 
   const worklogs: Array<{
-    jiraIssueId: string;
+    ticketKey: string;
     date: Date;
     hours: number;
-    jiraAccountId: string;
+    assigned: string;
     componentId: number;
   }> = [];
 
@@ -91,10 +91,10 @@ async function main() {
           const hours = [0.5, 1, 1.5, 2, 2.5, 3, 4][Math.floor(Math.random() * 7)];
           wlCounter++;
           worklogs.push({
-            jiraIssueId: `seed-wl-${wlCounter}`,
+            ticketKey: `seed-wl-${wlCounter}`,
             date,
             hours,
-            jiraAccountId: dev.jiraAccountId,
+            assigned: dev.email,
             componentId: comp.id,
           });
         }
