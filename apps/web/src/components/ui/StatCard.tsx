@@ -10,13 +10,13 @@ interface StatCardProps {
 export function StatCard({ label, value, unit, sub, color, alert }: StatCardProps) {
   return (
     <div className="rounded-[10px] border border-mgs-border bg-mgs-card p-4">
-      <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-mgs-text-faint">
+      <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.9px] text-mgs-text-faint">
         {label}
       </div>
       <div className="font-mono text-[26px] font-bold leading-none" style={{ color }}>
         {value}
         {unit && (
-          <span className="text-sm text-mgs-text-faint">{unit}</span>
+          <span className="text-[14px] text-mgs-text-faint">{unit}</span>
         )}
       </div>
       <div className="mt-1 text-[11px] text-mgs-text-dim">{sub}</div>

@@ -13,7 +13,7 @@ export function Header({ title, subtitle, badge }: HeaderProps) {
         </h1>
         <p className="mt-1 text-xs text-mgs-text-faint">{subtitle}</p>
       </div>
-      <span className="rounded-[20px] border border-mgs-border bg-mgs-card px-2.5 py-1 font-mono text-[10px] tracking-wider text-mgs-text-dim">
+      <span className="rounded-[20px] border border-mgs-border bg-mgs-card px-[10px] py-1 font-mono text-[10px] tracking-[0.5px] text-mgs-text-dim">
         {badge}
       </span>
     </div>

@@ -76,7 +76,7 @@ export function ClientHoursChart({ clients }: ClientHoursChartProps) {
   return (
     <div className="rounded-xl border border-mgs-border bg-mgs-card-alt p-6">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-2.5">
-        <span className="font-mono text-xs uppercase tracking-widest text-mgs-text-dim">
+        <span className="font-mono text-xs uppercase tracking-[1px] text-mgs-text-dim">
           Horas por Cliente (Contracted vs Used vs Remaining)
         </span>
         <div className="flex flex-wrap gap-4">
@@ -94,7 +94,7 @@ export function ClientHoursChart({ clients }: ClientHoursChartProps) {
 
 function LegendItem({ color, label }: { color: string; label: string }) {
   return (
-    <div className="flex items-center gap-[5px] text-[11px] uppercase tracking-wider text-mgs-text-muted">
+    <div className="flex items-center gap-[5px] text-[11px] uppercase tracking-[0.6px] text-mgs-text-muted">
       <div className="h-2.5 w-2.5 rounded-[3px]" style={{ background: color }} />
       {label}
     </div>

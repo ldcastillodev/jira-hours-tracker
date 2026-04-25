@@ -187,3 +187,23 @@ Fonts: **DM Sans** (body), **Space Mono** (numbers, labels, badges).
 - Sync defaults to current month's 1st day; `?since=` param allows historical sync
 - Worklogs without a mapped developer or project are silently skipped with debug logging (not errors) — prevents partial sync failures
 - Basic Auth over OAuth for Jira — simpler for internal tooling; token stored server-side only (frontend never sees it)
+
+### Phase 3 — React Setup, Tailwind Config, Dashboard Components ✅
+
+**Scope**: Complete frontend — routing, month navigation, DeveloperReport page, pixel-perfect design alignment.
+
+**Delivered**:
+- **React Router**: Two-page app with `BrowserRouter` — `/` (Dashboard) and `/developers` (DeveloperReport). AppShell wraps both with persistent nav bar.
+- **MonthPicker**: Arrow-based month navigation stored in URL query param (`?month=YYYY-MM`). Forward button disabled for future months. All report queries are reactive to month changes.
+- **AppShell + NavTabs**: Top navigation bar with active-state highlighting, MgS branding, and month picker. Consistent layout across pages.
+- **DeveloperReport Page**: Full implementation of the `MonthReport` Google Sheet equivalent — stat cards (total/billable/non-billable/active devs), horizontal stacked bar chart, and detail table with billable % progress bars.
+- **DeveloperWorkloadChart**: Horizontal stacked bar chart (billable vs non-billable) using react-chartjs-2, sorted by total hours descending. Dynamic height based on developer count.
+- **DeveloperTable**: Table with developer rows showing billable, non-billable, total hours, and billable percentage with color-coded progress bars (green ≥75%, amber ≥50%, red <50%).
+- **useMonth Hook**: Centralized month state from URL params — provides `month` (YYYY-MM), `label` (display), and `dateStr` (Spanish locale date).
+- **Pixel-Perfect Refinements**: `letter-spacing` values matched to design.html CSS (`0.9px` for stat labels, `0.5px` for badges, `1px` for section titles, `0.8px` for table headers, `0.6px` for legend items). Unit `<span>` font-size corrected to `14px`.
+- **Production Build**: Vite build passes — 59 modules, 394KB JS (129KB gzipped), 12KB CSS (3.4KB gzipped).
+
+**Key decisions**:
+- Month stored in URL query param (`?month=`) rather than React state — enables shareable links and browser back/forward navigation
+- Horizontal stacked bars for developer chart (vs vertical grouped bars for client chart) — better readability with long developer names
+- NavLink active detection via React Router — no custom state management needed

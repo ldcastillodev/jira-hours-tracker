@@ -10,7 +10,7 @@ export function ClientTable({ clients }: ClientTableProps) {
   return (
     <div className="overflow-hidden rounded-xl border border-mgs-border bg-mgs-card-alt">
       <div className="px-5 pt-[18px]">
-        <span className="font-mono text-xs uppercase tracking-widest text-mgs-text-dim">
+        <span className="font-mono text-xs uppercase tracking-[1px] text-mgs-text-dim">
           Detalle de Clientes
         </span>
       </div>
@@ -37,7 +37,7 @@ export function ClientTable({ clients }: ClientTableProps) {
 function Th({ children, align = 'right' }: { children: React.ReactNode; align?: 'left' | 'right' }) {
   return (
     <th
-      className={`border-b border-mgs-border bg-mgs-bg px-4 py-2.5 font-mono text-[10px] font-normal uppercase tracking-wider text-mgs-text-faint ${
+      className={`border-b border-mgs-border bg-mgs-bg px-4 py-2.5 font-mono text-[10px] font-normal uppercase tracking-[0.8px] text-mgs-text-faint ${
         align === 'left' ? 'text-left' : 'text-right'
       }`}
     >

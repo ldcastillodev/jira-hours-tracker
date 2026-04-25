@@ -1,5 +1,6 @@
 import type { ClientHoursSummaryDto } from '@mgs/shared';
 import { useApi } from '../hooks/useApi';
+import { useMonth } from '../hooks/useMonth';
 import { Header } from '../components/layout/Header';
 import { StatCard } from '../components/ui/StatCard';
 import { ClientHoursChart } from '../components/charts/ClientHoursChart';
@@ -11,19 +12,10 @@ import {
 } from '../components/ui/Skeleton';
 
 export function Dashboard() {
+  const { month, label: monthLabel, dateStr } = useMonth();
   const { data, loading, error } = useApi<ClientHoursSummaryDto>(
-    '/reports/client-hours',
+    `/reports/client-hours?month=${month}`,
   );
-
-  const now = new Date();
-  const monthLabel = now
-    .toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-    .toUpperCase();
-  const dateStr = now.toLocaleDateString('es-ES', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
 
   if (error) {
     return (
