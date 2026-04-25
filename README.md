@@ -49,31 +49,98 @@ mgs-clients/
 │       └── src/dto/
 │
 ├── turbo.json
+├── docker-compose.yml              # Local PostgreSQL (Docker)
 ├── package.json
 └── .env.example
 ```
 
-## Quick Start
+## Quick Start (Local con Docker)
+
+> **Requisitos**: Node.js ≥ 20, Docker Desktop
+
+### 1. Instalar dependencias
 
 ```bash
-# 1. Install dependencies
 npm install
+```
 
-# 2. Copy environment variables
+### 2. Levantar PostgreSQL local
+
+```bash
+docker compose up -d
+```
+
+Esto inicia un contenedor PostgreSQL 16 en `localhost:5432` con:
+- **User**: `mgs`
+- **Password**: `mgs_local`
+- **Database**: `mgs_clients`
+
+Los datos persisten en un volumen Docker (`pgdata`).
+
+### 3. Configurar variables de entorno
+
+```bash
 cp .env.example .env
-# Edit .env with your DATABASE_URL and Jira credentials
+```
 
-# 3. Generate Prisma client
-npm run db:generate
+Para desarrollo local con Docker, usa estos valores en `.env`:
 
-# 4. Push schema to database (or run migrations)
-npm run db:push
+```env
+DATABASE_URL="postgresql://mgs:mgs_local@localhost:5432/mgs_clients"
+API_PORT=3001
+CORS_ORIGIN="http://localhost:5173"
+```
 
-# 5. Seed sample data
-npm run db:seed
+> Las variables de Jira (`JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`) solo son necesarias si vas a usar el sync con Jira. Para datos de prueba, el seed es suficiente.
 
-# 6. Start development
+### 4. Generar Prisma Client y crear tablas
+
+```bash
+npx prisma generate --schema=packages/db/prisma/schema.prisma
+npx prisma db push --schema=packages/db/prisma/schema.prisma
+```
+
+### 5. Seedear datos de prueba
+
+```bash
+cd packages/db && npx ts-node prisma/seed.ts && cd ../..
+```
+
+El seed crea:
+- **15 proyectos** (clientes reales: Tishman Studio, Kraft Heinz, EF Tours, etc.) con presupuestos mensuales
+- **6 developers** (Sample Developer, María López, Carlos García, Ana Martínez, Luis Castillo, Sofía Rivera)
+- **~400+ worklogs** distribuidos en el mes actual y el anterior — horas variadas (0.5–4h), ~80% billable, repartidos entre los 15 proyectos
+
+### 6. Iniciar servidores de desarrollo
+
+```bash
 npm run dev
+```
+
+Esto arranca ambos servers vía Turborepo:
+
+| Servicio | URL | Descripción |
+|----------|-----|-------------|
+| Frontend | `http://localhost:5173` | React + Vite (hot reload) |
+| API | `http://localhost:3001` | NestJS (watch mode) |
+| Health | `http://localhost:3001/health` | Verificar que la API está viva |
+
+El frontend proxea `/api/*` → `localhost:3001` automáticamente en dev.
+
+### Comandos útiles
+
+```bash
+# Re-seedear datos (borra worklogs anteriores y genera nuevos)
+cd packages/db && npx ts-node prisma/seed.ts && cd ../..
+
+# Abrir Prisma Studio (UI visual de la DB)
+npx prisma studio --schema=packages/db/prisma/schema.prisma
+
+# Parar PostgreSQL
+docker compose down
+
+# Parar y borrar datos
+docker compose down -v
 ```
 
 ## Data Model
