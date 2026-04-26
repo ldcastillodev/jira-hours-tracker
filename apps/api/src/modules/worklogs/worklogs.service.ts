@@ -26,6 +26,7 @@ export class WorklogsService {
   create(data: {
     date: string;
     hours: number;
+    jiraWorklogId: string;
     ticketKey: string;
     assigned: string;
     componentId: number;
@@ -34,6 +35,7 @@ export class WorklogsService {
       data: {
         date: new Date(data.date),
         hours: data.hours,
+        jiraWorklogId: data.jiraWorklogId,
         ticketKey: data.ticketKey,
         assigned: data.assigned,
         componentId: data.componentId,

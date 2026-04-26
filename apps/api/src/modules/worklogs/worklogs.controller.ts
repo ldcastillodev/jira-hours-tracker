@@ -21,6 +21,7 @@ export class WorklogsController {
     body: {
       date: string;
       hours: number;
+      jiraWorklogId: string;
       ticketKey: string;
       assigned: string;
       componentId: number;

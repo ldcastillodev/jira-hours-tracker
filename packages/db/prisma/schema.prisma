@@ -43,18 +43,20 @@ model Developer {
 }
 
 model Worklog {
-  id          Int       @id @default(autoincrement())
-  hours       Float
-  date        DateTime  @db.Date
-  ticketKey   String    @unique @map("ticket_key")
-  assigned    String
-  componentId Int       @map("component_id")
-  component   Component @relation(fields: [componentId], references: [id])
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  id             Int       @id @default(autoincrement())
+  jiraWorklogId  String    @unique @map("jira_worklog_id")
+  ticketKey      String    @map("ticket_key")
+  hours          Float
+  date           DateTime  @db.Date
+  assigned       String
+  componentId    Int       @map("component_id")
+  component      Component @relation(fields: [componentId], references: [id])
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
   @@index([componentId, date])
   @@index([assigned, date])
+  @@index([ticketKey])
   @@map("worklogs")
 }
 

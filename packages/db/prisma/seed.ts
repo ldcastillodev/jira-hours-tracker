@@ -64,6 +64,7 @@ async function main() {
   const month = now.getMonth();
 
   const worklogs: Array<{
+    jiraWorklogId: string;
     ticketKey: string;
     date: Date;
     hours: number;
@@ -91,7 +92,8 @@ async function main() {
           const hours = [0.5, 1, 1.5, 2, 2.5, 3, 4][Math.floor(Math.random() * 7)];
           wlCounter++;
           worklogs.push({
-            ticketKey: `seed-wl-${wlCounter}`,
+            jiraWorklogId: `seed-wl-${wlCounter}`,
+            ticketKey: `SEED-${wlCounter}`,
             date,
             hours,
             assigned: dev.email,

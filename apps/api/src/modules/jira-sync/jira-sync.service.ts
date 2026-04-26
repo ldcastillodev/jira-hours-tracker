@@ -176,15 +176,16 @@ export class JiraSyncService {
 
     const hours = wl.timeSpentSeconds / 3600;
     const date = new Date(wl.started);
-    date.setUTCHours(0, 0, 0, 0);
+
 
     await this.prisma.worklog.upsert({
-      where: { ticketKey: issueKey },
+      where: { jiraWorklogId: wl.id },
       update: {
         hours,
         date,
       },
       create: {
+        jiraWorklogId: wl.id,
         ticketKey: issueKey,
         date,
         hours,

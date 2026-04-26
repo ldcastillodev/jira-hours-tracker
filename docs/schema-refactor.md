@@ -164,9 +164,72 @@ Resultado del seed: `{ projects: 3, components: 6, developers: 4, worklogs: 268 
 
 ### Decisiones de diseño
 
-- `ticketKey` es `@unique` — un ticket Jira = un row en Worklog.
+- `ticketKey` era `@unique` en esta fase — corregido en Refactor #3.
 - Si `author.emailAddress` del worklog de Jira no coincide con ningún `Developer.email` → el worklog se **skipea** con un `logger.warn`.
 - `Worklog.assigned` es un `String` plano, **no FK** — el join con Developer se hace por email en los servicios de reportes.
+
+---
+
+## Refactor #3 — `jiraWorklogId` como clave de upsert (Abril 2026)
+
+### Problema identificado
+El Refactor #2 usaba `ticketKey @unique` como clave de upsert, asumiendo 1 ticket = 1 worklog. Eso es incorrecto: un ticket en Jira puede tener múltiples worklogs (distintos developers, múltiples entradas del mismo developer). La clave verdaderamente única es `worklog.id` de Jira.
+
+### Cambios en el schema
+
+**Worklog** — `ticketKey` deja de ser `@unique`; se añade `jiraWorklogId` como clave de upsert:
+```prisma
+model Worklog {
+  id             Int       @id @default(autoincrement())
+  jiraWorklogId  String    @unique @map("jira_worklog_id")
+  ticketKey      String    @map("ticket_key")
+  hours          Float
+  date           DateTime  @db.Date
+  assigned       String
+  componentId    Int       @map("component_id")
+  ...
+  @@index([componentId, date])
+  @@index([assigned, date])
+  @@index([ticketKey])
+}
+```
+
+### Mapping del payload de Jira
+
+| Campo Jira | Campo DB |
+|---|---|
+| `worklog.id` | `jiraWorklogId` |
+| `issue.key` | `ticketKey` |
+| `worklog.author.emailAddress` | `assigned` |
+| `worklog.timeSpentSeconds / 3600` | `hours` |
+
+### Comandos ejecutados
+
+```bash
+npx prisma migrate reset --force --schema=packages/db/prisma/schema.prisma
+npx prisma migrate dev --name "add_jira_worklog_id" --schema=packages/db/prisma/schema.prisma
+cd packages/db && npx ts-node prisma/seed.ts
+```
+
+Migración: `20260426021301_add_jira_worklog_id`
+
+Resultado del seed: `{ projects: 3, components: 6, developers: 4, worklogs: 279 }`
+
+### Archivos modificados
+
+| Archivo | Qué cambió |
+|---------|-----------|
+| `packages/db/prisma/schema.prisma` | `ticketKey` deja de ser `@unique`; añadido `jiraWorklogId @unique`; añadido `@@index([ticketKey])` |
+| `packages/db/prisma/seed.ts` | Worklogs incluyen `jiraWorklogId: \`seed-wl-${n}\`` + `ticketKey: \`SEED-${n}\`` |
+| `apps/api/src/modules/jira-sync/jira-sync.service.ts` | Upsert cambia a `where: { jiraWorklogId: wl.id }`; `create` incluye `jiraWorklogId` + `ticketKey` |
+| `apps/api/src/modules/worklogs/worklogs.service.ts` | `create()` incluye `jiraWorklogId` como campo requerido |
+| `apps/api/src/modules/worklogs/worklogs.controller.ts` | Body type incluye `jiraWorklogId` |
+
+### Decisiones de diseño
+
+- `jiraWorklogId` es la **única** clave de upsert — no hay compound keys.
+- `ticketKey` es informacional (para UI y readability), no sirve para deduplicación.
+- Múltiples rows en Worklog pueden compartir el mismo `ticketKey` (distintos developers logueando en el mismo ticket).
 
 ---
 
