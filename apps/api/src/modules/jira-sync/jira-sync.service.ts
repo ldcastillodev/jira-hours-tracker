@@ -19,14 +19,13 @@ interface JiraSearchResponse {
     fields: {
       worklog: {
         total: number;
+        maxResults: number;
         worklogs: JiraWorklog[];
       };
       components: Array<{ name: string }>;
     };
   }>;
-  total: number;
-  startAt: number;
-  maxResults: number;
+  nextPageToken?: string;
 }
 
 @Injectable()
@@ -53,65 +52,62 @@ export class JiraSyncService {
     const headers = {
       Authorization: `Basic ${auth}`,
       Accept: 'application/json',
+      "Content-Type": "application/json",
     };
 
     const since = sinceDate || this.defaultSinceDate();
     this.logger.log(`Starting Jira sync since ${since}`);
     const components = await this.prisma.component.findMany().then((comps) => comps.map((c) => c.name));
     this.logger.debug(`Existing components in DB: ${components.join(', ')}`);
-    let startAt = 0;
-    const maxResults = 50;
+
     let totalProcessed = 0;
     let upsertedCount = 0;
     let skippedCount = 0;
-
-    let hasMore = true;
-    while (hasMore) {
+    let nextPageToken: string | undefined;
+    const jiraIssues: JiraSearchResponse['issues'] = [];
+    do {
       const jql = `component in (${components.map((c) => `"${c}"`).join(',')}) AND worklogDate >= "${since}"`;
       const url = `${baseUrl}/rest/api/3/search/jql`;
+      const body: Record<string, unknown> = {
+        jql,
+        maxResults: 100,
+        fields: ['worklog', 'components'],
+      };
 
+      if (nextPageToken) {
+        body.nextPageToken = nextPageToken;
+      }
+      
       const { data } = await firstValueFrom(
-        this.httpService.get<JiraSearchResponse>(url, {
+        this.httpService.post<JiraSearchResponse>(url, body, {
           headers,
-          params: {
-            jql,
-            startAt,
-            maxResults,
-            fields: 'worklog,components',
-          },
         }),
       );
 
-      for (const issue of data.issues) {
-        const worklogs = issue.fields.worklog.worklogs;
-        const componentName = issue.fields.components?.[0]?.name;
+      jiraIssues.push(...data.issues);
 
-        if (!componentName) {
-          skippedCount += issue.fields.worklog.total;
-          totalProcessed += issue.fields.worklog.total;
-          continue;
-        }
+      nextPageToken = data.nextPageToken;
+    } while (nextPageToken);
 
-        const allWorklogs =
-          issue.fields.worklog.total > worklogs.length
-            ? await this.fetchAllIssueWorklogs(baseUrl, issue.id, headers)
-            : worklogs;
+    for (const issue of jiraIssues) {
+      const worklogs = issue.fields.worklog.worklogs;
+      const componentName = issue.fields.components?.[0]?.name;
 
-        for (const wl of allWorklogs) {
-          const startedDate = new Date(wl.started);
-          if (startedDate < new Date(since)) continue;
+      const allWorklogs =
+        issue.fields.worklog.total <= issue.fields.worklog.maxResults
+          ? worklogs
+          : await this.fetchAllIssueWorklogs(baseUrl, issue.key, headers);
 
-          const result = await this.upsertWorklog(wl, componentName, issue.key);
-          if (result === 'upserted') upsertedCount++;
-          else skippedCount++;
-          totalProcessed++;
-        }
+      for (const wl of allWorklogs) {
+        const startedDate = new Date(wl.started);
+        if (startedDate < new Date(since)) continue;
+
+        const result = await this.upsertWorklog(wl, componentName, issue.key);
+        if (result === 'upserted') upsertedCount++;
+        else skippedCount++;
+        totalProcessed++;
       }
-
-      startAt += data.issues.length;
-      hasMore = startAt < data.total;
-    }
-
+    } 
     this.logger.log(
       `Sync complete: ${totalProcessed} processed, ${upsertedCount} upserted, ${skippedCount} skipped`,
     );
@@ -127,29 +123,27 @@ export class JiraSyncService {
 
   private async fetchAllIssueWorklogs(
     baseUrl: string,
-    issueId: string,
+    issueKey: string,
     headers: Record<string, string>,
   ): Promise<JiraWorklog[]> {
-    const all: JiraWorklog[] = [];
+    const worklogs: JiraWorklog[] = [];
     let startAt = 0;
-    const maxResults = 100;
-    let hasMore = true;
 
-    while (hasMore) {
-      const url = `${baseUrl}/rest/api/3/issue/${issueId}/worklog`;
+    do {
+      const url = `${baseUrl}/rest/api/3/issue/${issueKey}/worklog?startAt=${startAt}&maxResults=1000`;
       const { data } = await firstValueFrom(
         this.httpService.get(url, {
           headers,
-          params: { startAt, maxResults },
         }),
       );
 
-      all.push(...data.worklogs);
-      startAt += data.worklogs.length;
-      hasMore = startAt < data.total;
-    }
+      worklogs.push(...data.worklogs);
 
-    return all;
+      if (startAt + data.maxResults >= data.total) break;
+      startAt += data.maxResults;
+    } while (true);  
+
+    return worklogs;
   }
 
   private async upsertWorklog(
