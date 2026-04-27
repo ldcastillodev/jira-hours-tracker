@@ -63,11 +63,11 @@ export function DownloadMenu({ report, chartRef }: DownloadMenuProps) {
     body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: ${bg}; color: ${textColor}; padding: 40px; }
     h1 { font-family: monospace; font-size: 18px; font-weight: 700; margin: 0 0 6px; }
     .meta { font-size: 12px; color: ${mutedColor}; margin-bottom: 28px; line-height: 1.9; }
-    .card { background: ${cardBg}; border: 1px solid ${border}; border-radius: 12px; padding: 24px; }
+    .card { background: ${cardBg}; border: 1px solid ${border}; border-radius: 12px; padding: 24px; max-width: 1200px; margin: 0 auto; }
+    .chart-container { position: relative; width: 100%; height: 400px; }
     .legend { display: flex; gap: 16px; margin-bottom: 16px; }
     .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: ${mutedColor}; }
     .legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
-    canvas { width: 100% !important; }
     .footer { margin-top: 16px; font-size: 11px; color: ${mutedColor}; }
   </style>
 </head>
@@ -85,7 +85,9 @@ export function DownloadMenu({ report, chartRef }: DownloadMenuProps) {
       <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div> Billable</div>
       <div class="legend-item"><div class="legend-dot" style="background:#8b5cf6"></div> Non-Billable</div>
     </div>
+    <div class="chart-container">
     <canvas id="chart" height="320"></canvas>
+  </div>
   </div>
   <div class="footer">Generated ${new Date().toLocaleString()}</div>
   <script>
@@ -94,7 +96,7 @@ export function DownloadMenu({ report, chartRef }: DownloadMenuProps) {
       data: ${JSON.stringify(chartData)},
       options: {
         responsive: true,
-        maintainAspectRatio: false,
+        maintainAspectRatio: true,
         plugins: {
           legend: { display: false },
           tooltip: {
@@ -129,21 +131,38 @@ export function DownloadMenu({ report, chartRef }: DownloadMenuProps) {
       Component: d.component,
       Developer: d.developer,
       'Ticket Key': d.ticketKey,
-      'Jira Worklog ID': d.jiraWorklogId,
       Hours: d.hours,
       Billable: d.billable ? 'Yes' : 'No',
     }));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detailsRows), 'Details');
 
-    const summaryRows = [
-      { Metric: 'Period', Value: report.period },
-      { Metric: 'Start Date', Value: report.startDate },
-      { Metric: 'End Date', Value: report.endDate },
-      { Metric: 'Total Hours', Value: report.summary.totalHours },
-      { Metric: 'Billable Hours', Value: report.summary.billableHours },
-      { Metric: 'Non-Billable Hours', Value: report.summary.nonBillableHours },
-      { Metric: 'Worklog Entries', Value: report.summary.worklogs },
-    ];
+    // Summary: grouped by (Project, Developer)
+    const groupMap = new Map<string, { project: string; developer: string; total: number; billable: number; nonBillable: number }>();
+    for (const d of report.details) {
+      const key = `${d.project}|||${d.developer}`;
+      const g = groupMap.get(key) ?? { project: d.project, developer: d.developer, total: 0, billable: 0, nonBillable: 0 };
+      g.total += d.hours;
+      if (d.billable) g.billable += d.hours;
+      else g.nonBillable += d.hours;
+      groupMap.set(key, g);
+    }
+    const summaryRows = [...groupMap.values()]
+      .sort((a, b) => a.project.localeCompare(b.project) || a.developer.localeCompare(b.developer))
+      .map((g) => ({
+        Project: g.project,
+        Developer: g.developer,
+        'Total Hours': Math.round(g.total * 100) / 100,
+        'Billable Hours': Math.round(g.billable * 100) / 100,
+        'Non-Billable Hours': Math.round(g.nonBillable * 100) / 100,
+      }));
+    // Totals row
+    summaryRows.push({
+      Project: 'TOTAL',
+      Developer: '',
+      'Total Hours': Math.round(report.summary.totalHours * 100) / 100,
+      'Billable Hours': Math.round(report.summary.billableHours * 100) / 100,
+      'Non-Billable Hours': Math.round(report.summary.nonBillableHours * 100) / 100,
+    });
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summaryRows), 'Summary');
 
     XLSX.writeFile(wb, `${filename}.xlsx`);

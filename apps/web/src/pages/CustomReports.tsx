@@ -8,6 +8,7 @@ import { StatCard } from '../components/ui/StatCard';
 import { FilterForm } from '../components/reports/FilterForm';
 import { ReportChart } from '../components/reports/ReportChart';
 import { DownloadMenu } from '../components/reports/DownloadMenu';
+import { DetailsPanel } from '../components/reports/DetailsPanel';
 import type { FilterValues } from '../components/reports/FilterForm';
 import type { CustomReportTimelineEntryDto } from '@mgs/shared';
 
@@ -169,6 +170,8 @@ export function CustomReports() {
 
         {!loading && report && (
           <>
+            {/* Date range badge */}
+            <DateRangeBadge period={report.period} startDate={report.startDate} endDate={report.endDate} />
             {/* Global summary stats */}
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
               <StatCard
@@ -202,7 +205,7 @@ export function CustomReports() {
               />
               <StatCard
                 label="Date Range"
-                value={report.endDate.slice(5)}
+                value={`${report.startDate.slice(5)} → ${report.endDate.slice(5)}`}
                 sub={`${report.startDate} → ${report.endDate}`}
                 color="#f59e0b"
               />
@@ -293,53 +296,44 @@ export function CustomReports() {
             </div>
 
             {/* Details table */}
-            {report.details.length > 0 && (
-              <div className="overflow-x-auto rounded-xl border border-mgs-border bg-mgs-card-alt">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-mgs-border">
-                      {['Date', 'Developer', 'Project', 'Component', 'Ticket', 'Hours', 'Billable'].map(
-                        (h) => (
-                          <th
-                            key={h}
-                            className="px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[0.9px] text-mgs-text-faint"
-                          >
-                            {h}
-                          </th>
-                        ),
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {report.details.map((d, i) => (
-                      <tr key={i} className="border-b border-mgs-border/50 last:border-0">
-                        <td className="px-4 py-2.5 font-mono text-mgs-text-dim">{d.date}</td>
-                        <td className="px-4 py-2.5 text-mgs-text-muted">{devNameMap.get(d.developer) ?? d.developer}</td>
-                        <td className="px-4 py-2.5 text-mgs-text-muted">{d.project}</td>
-                        <td className="px-4 py-2.5 text-mgs-text-muted">{d.component}</td>
-                        <td className="px-4 py-2.5 font-mono text-mgs-text-dim">{d.ticketKey}</td>
-                        <td className="px-4 py-2.5 font-mono text-mgs-text">{d.hours.toFixed(1)}h</td>
-                        <td className="px-4 py-2.5">
-                          <span
-                            className={`rounded-[20px] px-2 py-0.5 text-[10px] font-medium ${
-                              d.billable
-                                ? 'bg-green-500/10 text-green-400'
-                                : 'bg-purple-500/10 text-purple-400'
-                            }`}
-                          >
-                            {d.billable ? 'Yes' : 'No'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <DetailsPanel
+              details={report.details}
+              period={report.period}
+              devNameMap={devNameMap}
+              reportKey={`${report.startDate}-${report.endDate}`}
+            />
           </>
         )}
       </div>
     </>
+  );
+}
+
+function DateRangeBadge({ period, startDate, endDate }: { period: 'day' | 'week' | 'month'; startDate: string; endDate: string }) {
+  function formatRange(): string {
+    const s = new Date(`${startDate}T00:00:00Z`);
+    const e = new Date(`${endDate}T00:00:00Z`);
+    const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' };
+
+    if (period === 'day') {
+      return s.toLocaleDateString('en-US', opts);
+    }
+    if (period === 'month') {
+      return s.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+    }
+    // week
+    const sStr = s.toLocaleDateString('en-US', opts);
+    const eAdj = new Date(e.getTime() - 86400000); // endDate is exclusive, show last day
+    const eStr = eAdj.toLocaleDateString('en-US', opts);
+    return `${sStr} - ${eStr}`;
+  }
+
+  return (
+    <div className="flex justify-center">
+      <span className="rounded-full bg-[#ff8c00]/15 px-4 py-1.5 text-xs font-semibold text-[#ff8c00]">
+        {formatRange()}
+      </span>
+    </div>
   );
 }
 

@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 interface Project {
   id: number;
@@ -25,35 +27,46 @@ interface FilterFormProps {
   loading: boolean;
 }
 
-/** Snap a YYYY-MM-DD string to the Monday of its week */
-function toMonday(dateStr: string): string {
-  const d = new Date(`${dateStr}T00:00:00Z`);
-  const dow = d.getUTCDay(); // 0=Sun
+/** Snap a Date to the Monday of its week, return YYYY-MM-DD */
+function toMonday(d: Date): string {
+  const copy = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dow = copy.getUTCDay(); // 0=Sun
   const diff = dow === 0 ? -6 : 1 - dow;
-  d.setUTCDate(d.getUTCDate() + diff);
-  return d.toISOString().slice(0, 10);
+  copy.setUTCDate(copy.getUTCDate() + diff);
+  return copy.toISOString().slice(0, 10);
+}
+
+/** Format a Date to YYYY-MM-DD */
+function fmt(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 export function FilterForm({ projects, developers, onSubmit, loading }: FilterFormProps) {
   const [period, setPeriod] = useState<'day' | 'week' | 'month'>('month');
   const [startDate, setStartDate] = useState('');
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [projectIds, setProjectIds] = useState<number[]>([]);
   const [developerEmails, setDeveloperEmails] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   function handlePeriodChange(p: 'day' | 'week' | 'month') {
     setPeriod(p);
-    setStartDate(''); // clear stale date when period changes
+    setStartDate('');
+    setSelectedDate(null);
   }
 
-  function handleDateChange(raw: string) {
-    if (period === 'week' && raw) {
-      setStartDate(toMonday(raw));
-    } else if (period === 'month' && raw) {
-      // <input type="month"> gives YYYY-MM — convert to YYYY-MM-01
-      setStartDate(`${raw}-01`);
+  function handleDateSelect(date: Date | null) {
+    setSelectedDate(date);
+    if (!date) {
+      setStartDate('');
+      return;
+    }
+    if (period === 'week') {
+      setStartDate(toMonday(date));
+    } else if (period === 'month') {
+      setStartDate(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`);
     } else {
-      setStartDate(raw);
+      setStartDate(fmt(date));
     }
   }
 
@@ -84,12 +97,6 @@ export function FilterForm({ projects, developers, onSubmit, loading }: FilterFo
   }
 
   const isValid = !!startDate && (projectIds.length > 0 || developerEmails.length > 0);
-
-  // Value for the date/month input (must match input type)
-  const dateInputValue =
-    period === 'month'
-      ? startDate.slice(0, 7) // YYYY-MM
-      : startDate; // YYYY-MM-DD
 
   return (
     <form onSubmit={handleSubmit} className="rounded-xl border border-mgs-border bg-mgs-card p-5">
@@ -127,21 +134,16 @@ export function FilterForm({ projects, developers, onSubmit, loading }: FilterFo
             {period === 'week' ? 'Week (select any day)' : period === 'month' ? 'Month' : 'Date'}
             {' '}<span className="text-mgs-red">*</span>
           </label>
-          {period === 'month' ? (
-            <input
-              type="month"
-              value={dateInputValue}
-              onChange={(e) => handleDateChange(e.target.value)}
-              className="w-full rounded-lg border border-mgs-border bg-mgs-card-alt px-3 py-2 text-xs text-mgs-text outline-none transition-colors focus:border-mgs-blue [color-scheme:dark]"
-            />
-          ) : (
-            <input
-              type="date"
-              value={dateInputValue}
-              onChange={(e) => handleDateChange(e.target.value)}
-              className="w-full rounded-lg border border-mgs-border bg-mgs-card-alt px-3 py-2 text-xs text-mgs-text outline-none transition-colors focus:border-mgs-blue [color-scheme:dark]"
-            />
-          )}
+          <DatePicker
+            selected={selectedDate}
+            onChange={handleDateSelect}
+            showMonthYearPicker={period === 'month'}
+            dateFormat={period === 'month' ? 'MMMM yyyy' : 'yyyy-MM-dd'}
+            placeholderText={period === 'month' ? 'Select month…' : 'Select date…'}
+            className="mgs-datepicker-input w-full rounded-lg border border-mgs-border bg-mgs-card-alt px-3 py-2 text-xs text-mgs-text outline-none transition-colors focus:border-mgs-blue"
+            calendarClassName="mgs-datepicker"
+            wrapperClassName="w-full"
+          />
           {period === 'week' && startDate && (
             <p className="mt-1 text-[10px] text-mgs-text-dim">
               Week of {startDate}
