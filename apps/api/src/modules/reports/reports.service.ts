@@ -5,6 +5,7 @@ import type {
   MonthReportDto,
   ClientSummaryDto,
   DailySheetDto,
+  CustomReportDto,
 } from '@mgs/shared';
 
 @Injectable()
@@ -169,5 +170,120 @@ export class ReportsService {
   private currentMonth(): string {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  async getCustomReport(params: {
+    period: 'day' | 'week' | 'month';
+    startDate: string;
+    projectIds?: number[];
+    developerEmails?: string[];
+  }): Promise<CustomReportDto> {
+    const { period, startDate, projectIds, developerEmails } = params;
+    const { start, end } = this.computeDateRange(period, startDate);
+
+    // Build Prisma where clause
+    const where: Record<string, unknown> = {
+      date: { gte: start, lt: end },
+    };
+    if (projectIds && projectIds.length > 0) {
+      where.component = { projectId: { in: projectIds } };
+    }
+    if (developerEmails && developerEmails.length > 0) {
+      where.assigned = { in: developerEmails };
+    }
+
+    const worklogs = await this.prisma.worklog.findMany({
+      where,
+      include: { component: { include: { project: true } } },
+      orderBy: { date: 'asc' },
+    });
+
+    // Build timeline buckets (one per day in range, zero-filled)
+    const buckets = new Map<string, { billable: number; nonBillable: number }>();
+    const cursor = new Date(start);
+    while (cursor < end) {
+      const key = cursor.toISOString().slice(0, 10);
+      buckets.set(key, { billable: 0, nonBillable: 0 });
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+
+    let totalBillable = 0;
+    let totalNonBillable = 0;
+
+    const details = worklogs.map((w) => {
+      const hours = Number(w.hours);
+      const billable = w.component.isBillable;
+      const dateKey = (w.date as Date).toISOString().slice(0, 10);
+      const bucket = buckets.get(dateKey) ?? { billable: 0, nonBillable: 0 };
+      if (billable) {
+        bucket.billable += hours;
+        totalBillable += hours;
+      } else {
+        bucket.nonBillable += hours;
+        totalNonBillable += hours;
+      }
+      buckets.set(dateKey, bucket);
+
+      return {
+        date: dateKey,
+        developer: w.assigned,
+        project: w.component.project.name,
+        component: w.component.name,
+        ticketKey: w.ticketKey,
+        jiraWorklogId: w.jiraWorklogId,
+        hours,
+        billable,
+      };
+    });
+
+    const timeline = Array.from(buckets.entries()).map(([date, b]) => ({
+      date,
+      billableHours: Math.round(b.billable * 100) / 100,
+      nonBillableHours: Math.round(b.nonBillable * 100) / 100,
+    }));
+
+    return {
+      period,
+      startDate: start.toISOString().slice(0, 10),
+      endDate: new Date(end.getTime() - 1).toISOString().slice(0, 10),
+      filters: {
+        projectIds: projectIds ?? [],
+        developerEmails: developerEmails ?? [],
+      },
+      summary: {
+        totalHours: Math.round((totalBillable + totalNonBillable) * 100) / 100,
+        billableHours: Math.round(totalBillable * 100) / 100,
+        nonBillableHours: Math.round(totalNonBillable * 100) / 100,
+        worklogs: worklogs.length,
+      },
+      timeline,
+      details,
+    };
+  }
+
+  private computeDateRange(
+    period: 'day' | 'week' | 'month',
+    startDate: string,
+  ): { start: Date; end: Date } {
+    const ref = new Date(`${startDate}T00:00:00Z`);
+    if (period === 'day') {
+      const end = new Date(ref);
+      end.setUTCDate(end.getUTCDate() + 1);
+      return { start: ref, end };
+    }
+    if (period === 'week') {
+      // Monday of the week containing ref
+      const dow = ref.getUTCDay(); // 0=Sun, 1=Mon ... 6=Sat
+      const diffToMonday = (dow === 0 ? -6 : 1 - dow);
+      const start = new Date(ref);
+      start.setUTCDate(start.getUTCDate() + diffToMonday);
+      const end = new Date(start);
+      end.setUTCDate(end.getUTCDate() + 7);
+      return { start, end };
+    }
+    // month
+    const start = new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth(), 1));
+    const end = new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth() + 1, 1));
+    return { start, end };
   }
 }

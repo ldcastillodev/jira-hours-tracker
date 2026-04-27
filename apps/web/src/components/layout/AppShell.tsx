@@ -10,6 +10,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const month = searchParams.get('month') || currentMonth();
   const location = useLocation();
   const isManage = location.pathname === '/manage';
+  const isCustomReports = location.pathname === '/reports/custom';
 
   return (
     <div className="min-h-screen bg-mgs-bg font-sans">
@@ -23,13 +24,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="flex gap-1">
               <NavTab to={`/?month=${month}`}>Client Hours</NavTab>
               <NavTab to={`/developers?month=${month}`}>Developers</NavTab>
+              <NavTab to="/reports/custom">Reports</NavTab>
               <NavTab to="/manage">Manage</NavTab>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <ThemeToggle />
             <SyncButton />
-            {!isManage && <MonthPicker />}
+            {!isManage && !isCustomReports && <MonthPicker />}
           </div>
         </div>
       </nav>
