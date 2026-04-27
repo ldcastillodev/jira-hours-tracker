@@ -25,12 +25,37 @@ interface FilterFormProps {
   loading: boolean;
 }
 
+/** Snap a YYYY-MM-DD string to the Monday of its week */
+function toMonday(dateStr: string): string {
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  const dow = d.getUTCDay(); // 0=Sun
+  const diff = dow === 0 ? -6 : 1 - dow;
+  d.setUTCDate(d.getUTCDate() + diff);
+  return d.toISOString().slice(0, 10);
+}
+
 export function FilterForm({ projects, developers, onSubmit, loading }: FilterFormProps) {
   const [period, setPeriod] = useState<'day' | 'week' | 'month'>('month');
   const [startDate, setStartDate] = useState('');
   const [projectIds, setProjectIds] = useState<number[]>([]);
   const [developerEmails, setDeveloperEmails] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  function handlePeriodChange(p: 'day' | 'week' | 'month') {
+    setPeriod(p);
+    setStartDate(''); // clear stale date when period changes
+  }
+
+  function handleDateChange(raw: string) {
+    if (period === 'week' && raw) {
+      setStartDate(toMonday(raw));
+    } else if (period === 'month' && raw) {
+      // <input type="month"> gives YYYY-MM — convert to YYYY-MM-01
+      setStartDate(`${raw}-01`);
+    } else {
+      setStartDate(raw);
+    }
+  }
 
   function toggleProject(id: number) {
     setProjectIds((prev) =>
@@ -41,18 +66,6 @@ export function FilterForm({ projects, developers, onSubmit, loading }: FilterFo
   function toggleDeveloper(email: string) {
     setDeveloperEmails((prev) =>
       prev.includes(email) ? prev.filter((e) => e !== email) : [...prev, email],
-    );
-  }
-
-  function toggleAllProjects() {
-    setProjectIds((prev) =>
-      prev.length === projects.length ? [] : projects.map((p) => p.id),
-    );
-  }
-
-  function toggleAllDevelopers() {
-    setDeveloperEmails((prev) =>
-      prev.length === developers.length ? [] : developers.map((d) => d.email),
     );
   }
 
@@ -72,6 +85,12 @@ export function FilterForm({ projects, developers, onSubmit, loading }: FilterFo
 
   const isValid = !!startDate && (projectIds.length > 0 || developerEmails.length > 0);
 
+  // Value for the date/month input (must match input type)
+  const dateInputValue =
+    period === 'month'
+      ? startDate.slice(0, 7) // YYYY-MM
+      : startDate; // YYYY-MM-DD
+
   return (
     <form onSubmit={handleSubmit} className="rounded-xl border border-mgs-border bg-mgs-card p-5">
       <h2 className="mb-5 text-[10px] font-semibold uppercase tracking-[1px] text-mgs-text-faint">
@@ -89,7 +108,7 @@ export function FilterForm({ projects, developers, onSubmit, loading }: FilterFo
               <button
                 key={p}
                 type="button"
-                onClick={() => setPeriod(p)}
+                onClick={() => handlePeriodChange(p)}
                 className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium capitalize transition-colors ${
                   period === p
                     ? 'border-mgs-blue bg-mgs-blue/10 text-mgs-blue'
@@ -102,52 +121,53 @@ export function FilterForm({ projects, developers, onSubmit, loading }: FilterFo
           </div>
         </div>
 
-        {/* Date */}
+        {/* Smart Date Picker */}
         <div>
           <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.9px] text-mgs-text-faint">
-            Start Date <span className="text-mgs-red">*</span>
+            {period === 'week' ? 'Week (select any day)' : period === 'month' ? 'Month' : 'Date'}
+            {' '}<span className="text-mgs-red">*</span>
           </label>
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="w-full rounded-lg border border-mgs-border bg-mgs-card-alt px-3 py-2 text-xs text-mgs-text outline-none transition-colors placeholder:text-mgs-text-dim focus:border-mgs-blue [color-scheme:dark]"
-          />
+          {period === 'month' ? (
+            <input
+              type="month"
+              value={dateInputValue}
+              onChange={(e) => handleDateChange(e.target.value)}
+              className="w-full rounded-lg border border-mgs-border bg-mgs-card-alt px-3 py-2 text-xs text-mgs-text outline-none transition-colors focus:border-mgs-blue [color-scheme:dark]"
+            />
+          ) : (
+            <input
+              type="date"
+              value={dateInputValue}
+              onChange={(e) => handleDateChange(e.target.value)}
+              className="w-full rounded-lg border border-mgs-border bg-mgs-card-alt px-3 py-2 text-xs text-mgs-text outline-none transition-colors focus:border-mgs-blue [color-scheme:dark]"
+            />
+          )}
+          {period === 'week' && startDate && (
+            <p className="mt-1 text-[10px] text-mgs-text-dim">
+              Week of {startDate}
+            </p>
+          )}
         </div>
 
-        {/* Projects */}
-        <MultiSelect
+        {/* Projects multi-select */}
+        <MultiSelectBox
           label="Projects"
-          allSelected={projectIds.length === projects.length && projects.length > 0}
-          noneSelected={projectIds.length === 0}
-          onToggleAll={toggleAllProjects}
-        >
-          {projects.map((p) => (
-            <CheckItem
-              key={p.id}
-              label={p.name}
-              checked={projectIds.includes(p.id)}
-              onChange={() => toggleProject(p.id)}
-            />
-          ))}
-        </MultiSelect>
+          items={projects.map((p) => ({ id: String(p.id), label: p.name }))}
+          selectedIds={projectIds.map(String)}
+          onToggle={(id) => toggleProject(Number(id))}
+          onSelectAll={() => setProjectIds(projects.map((p) => p.id))}
+          onDeselectAll={() => setProjectIds([])}
+        />
 
-        {/* Developers */}
-        <MultiSelect
+        {/* Developers multi-select */}
+        <MultiSelectBox
           label="Developers"
-          allSelected={developerEmails.length === developers.length && developers.length > 0}
-          noneSelected={developerEmails.length === 0}
-          onToggleAll={toggleAllDevelopers}
-        >
-          {developers.map((d) => (
-            <CheckItem
-              key={d.email}
-              label={d.name}
-              checked={developerEmails.includes(d.email)}
-              onChange={() => toggleDeveloper(d.email)}
-            />
-          ))}
-        </MultiSelect>
+          items={developers.map((d) => ({ id: d.email, label: d.name }))}
+          selectedIds={developerEmails}
+          onToggle={(email) => toggleDeveloper(email)}
+          onSelectAll={() => setDeveloperEmails(developers.map((d) => d.email))}
+          onDeselectAll={() => setDeveloperEmails([])}
+        />
       </div>
 
       {error && (
@@ -167,61 +187,97 @@ export function FilterForm({ projects, developers, onSubmit, loading }: FilterFo
   );
 }
 
-function MultiSelect({
-  label,
-  allSelected,
-  noneSelected,
-  onToggleAll,
-  children,
-}: {
+interface MultiSelectBoxProps {
   label: string;
-  allSelected: boolean;
-  noneSelected: boolean;
-  onToggleAll: () => void;
-  children: React.ReactNode;
-}) {
+  items: { id: string; label: string }[];
+  selectedIds: string[];
+  onToggle: (id: string) => void;
+  onSelectAll: () => void;
+  onDeselectAll: () => void;
+}
+
+function MultiSelectBox({
+  label,
+  items,
+  selectedIds,
+  onToggle,
+  onSelectAll,
+  onDeselectAll,
+}: MultiSelectBoxProps) {
+  const [search, setSearch] = useState('');
+
+  const filtered = items.filter((item) =>
+    item.label.toLowerCase().includes(search.toLowerCase()),
+  );
+
+  const allSelected = selectedIds.length === items.length && items.length > 0;
+  const selectedCount = selectedIds.length;
+
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
         <label className="text-[10px] font-semibold uppercase tracking-[0.9px] text-mgs-text-faint">
           {label}
         </label>
-        <button
-          type="button"
-          onClick={onToggleAll}
-          className="text-[10px] text-mgs-blue transition-colors hover:text-mgs-blue-light"
-        >
-          {allSelected ? 'None' : 'All'}
-        </button>
+        <span className="text-[10px] text-mgs-text-dim">
+          {selectedCount} of {items.length} selected
+        </span>
       </div>
-      <div className="max-h-32 overflow-y-auto rounded-lg border border-mgs-border bg-mgs-card-alt p-2 space-y-1">
-        {children}
-        {noneSelected && (
-          <p className="px-1 text-[10px] text-mgs-text-dim italic">None selected</p>
-        )}
+
+      <div className="rounded-lg border border-mgs-border bg-mgs-card-alt">
+        {/* Search */}
+        <div className="border-b border-mgs-border px-2.5 py-1.5">
+          <input
+            type="text"
+            placeholder="Search…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full bg-transparent text-xs text-mgs-text outline-none placeholder:text-mgs-text-dim"
+          />
+        </div>
+
+        {/* List */}
+        <div className="max-h-32 overflow-y-auto p-1.5 space-y-0.5">
+          {filtered.length === 0 && (
+            <p className="px-2 py-1 text-[10px] text-mgs-text-dim italic">No matches</p>
+          )}
+          {filtered.map((item) => (
+            <label
+              key={item.id}
+              className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 transition-colors hover:bg-mgs-card"
+            >
+              <input
+                type="checkbox"
+                checked={selectedIds.includes(item.id)}
+                onChange={() => onToggle(item.id)}
+                className="h-3 w-3 accent-mgs-blue"
+              />
+              <span className="text-xs text-mgs-text-muted">{item.label}</span>
+            </label>
+          ))}
+        </div>
+
+        {/* Footer actions */}
+        <div className="flex gap-2 border-t border-mgs-border px-2.5 py-1.5">
+          <button
+            type="button"
+            onClick={onSelectAll}
+            disabled={allSelected}
+            className="text-[10px] text-mgs-blue transition-colors hover:text-mgs-blue-light disabled:opacity-40"
+          >
+            Select All
+          </button>
+          <span className="text-mgs-border">|</span>
+          <button
+            type="button"
+            onClick={onDeselectAll}
+            disabled={selectedCount === 0}
+            className="text-[10px] text-mgs-text-dim transition-colors hover:text-mgs-text disabled:opacity-40"
+          >
+            Deselect All
+          </button>
+        </div>
       </div>
     </div>
-  );
-}
-
-function CheckItem({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: () => void;
-}) {
-  return (
-    <label className="flex cursor-pointer items-center gap-2 rounded px-1 py-0.5 transition-colors hover:bg-mgs-card">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={onChange}
-        className="h-3 w-3 accent-mgs-blue"
-      />
-      <span className="text-xs text-mgs-text-muted">{label}</span>
-    </label>
   );
 }
