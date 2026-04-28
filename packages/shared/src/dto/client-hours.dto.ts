@@ -1,6 +1,7 @@
 export interface ClientHoursDto {
   projectId: number;
   projectName: string;
+  isBillable: boolean;
   contracted: number;
   used: number;
   remaining: number;

@@ -3,7 +3,7 @@ import { useState } from 'react';
 interface Project {
   id: number;
   name: string;
-  monthlyBudget: number;
+  monthlyBudget: number | null;
 }
 
 interface ProjectFormProps {

@@ -7,7 +7,7 @@ import { showToast } from '../ui/Toast';
 interface Project {
   id: number;
   name: string;
-  monthlyBudget: number;
+  monthlyBudget: number | null;
 }
 
 interface ProjectPanelProps {

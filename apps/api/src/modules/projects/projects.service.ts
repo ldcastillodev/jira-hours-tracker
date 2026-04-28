@@ -22,13 +22,13 @@ export class ProjectsService {
     return project;
   }
 
-  create(data: { name: string; monthlyBudget: number }) {
+  create(data: { name: string; monthlyBudget?: number | null }) {
     return this.prisma.project.create({
       data: { name: data.name, monthlyBudget: data.monthlyBudget },
     });
   }
 
-  async update(id: number, data: { name?: string; monthlyBudget?: number }) {
+  async update(id: number, data: { name?: string; monthlyBudget?: number | null }) {
     await this.findOne(id);
     return this.prisma.project.update({ where: { id }, data });
   }

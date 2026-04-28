@@ -6,7 +6,7 @@ import { showToast } from '../ui/Toast';
 interface DeletedProject {
   id: number;
   name: string;
-  monthlyBudget: number;
+  monthlyBudget: number | null;
   deletedAt: string;
   components: { id: number; name: string; deletedAt: string | null }[];
 }
@@ -178,7 +178,7 @@ function ProjectRow({
   return (
     <tr className="border-b border-mgs-border/50 last:border-0">
       <td className="px-4 py-3 font-medium text-mgs-text">{project.name}</td>
-      <td className="px-4 py-3 text-mgs-text-muted">${project.monthlyBudget}h</td>
+      <td className="px-4 py-3 text-mgs-text-muted">{project.monthlyBudget != null ? `${project.monthlyBudget}h` : '—'}</td>
       <td className="px-4 py-3 text-mgs-text-dim">{trashedComponents.length}</td>
       <td className="px-4 py-3 text-mgs-text-dim">{formatDate(project.deletedAt)}</td>
       <td className="px-4 py-3 text-right">

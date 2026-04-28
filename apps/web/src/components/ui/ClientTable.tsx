@@ -5,31 +5,62 @@ interface ClientTableProps {
 }
 
 export function ClientTable({ clients }: ClientTableProps) {
-  const visible = clients.filter((c) => c.contracted > 0 || c.used > 0);
+  const billable = clients.filter((c) => c.isBillable && (c.contracted > 0 || c.used > 0));
+  const nonBillable = clients.filter((c) => !c.isBillable && c.used > 0);
 
+  return (
+    <div className="space-y-5">
+      {billable.length > 0 && (
+        <Section title="Clientes Facturables">
+          <table className="w-full border-collapse text-[12.5px]">
+            <thead>
+              <tr>
+                <Th align="left">Cliente</Th>
+                <Th>Contratadas</Th>
+                <Th>Usadas</Th>
+                <Th>Restantes</Th>
+                <Th>% Usado</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {billable.map((c) => (
+                <BillableRow key={c.projectId} client={c} />
+              ))}
+            </tbody>
+          </table>
+        </Section>
+      )}
+
+      {nonBillable.length > 0 && (
+        <Section title="Clientes No Facturables">
+          <table className="w-full border-collapse text-[12.5px]">
+            <thead>
+              <tr>
+                <Th align="left">Cliente</Th>
+                <Th>Horas Usadas</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {nonBillable.map((c) => (
+                <NonBillableRow key={c.projectId} client={c} />
+              ))}
+            </tbody>
+          </table>
+        </Section>
+      )}
+    </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="overflow-hidden rounded-xl border border-mgs-border bg-mgs-card-alt">
       <div className="px-5 pt-[18px]">
         <span className="font-mono text-xs uppercase tracking-[1px] text-mgs-text-dim">
-          Detalle de Clientes
+          {title}
         </span>
       </div>
-      <table className="w-full border-collapse text-[12.5px]">
-        <thead>
-          <tr>
-            <Th align="left">Cliente</Th>
-            <Th>Contratadas</Th>
-            <Th>Usadas</Th>
-            <Th>Restantes</Th>
-            <Th>% Usado</Th>
-          </tr>
-        </thead>
-        <tbody>
-          {visible.map((c) => (
-            <ClientRow key={c.projectId} client={c} />
-          ))}
-        </tbody>
-      </table>
+      {children}
     </div>
   );
 }
@@ -46,7 +77,7 @@ function Th({ children, align = 'right' }: { children: React.ReactNode; align?: 
   );
 }
 
-function ClientRow({ client }: { client: ClientHoursDto }) {
+function BillableRow({ client }: { client: ClientHoursDto }) {
   const isOver = client.remaining < 0;
 
   let pctColor = '#10b981';
@@ -89,6 +120,19 @@ function ClientRow({ client }: { client: ClientHoursDto }) {
             {client.percentUsed.toFixed(1)}%
           </span>
         </div>
+      </td>
+    </tr>
+  );
+}
+
+function NonBillableRow({ client }: { client: ClientHoursDto }) {
+  return (
+    <tr className="group">
+      <td className="border-b border-mgs-border-dark px-4 py-2.5 text-left font-medium text-mgs-text group-hover:bg-mgs-card">
+        {client.projectName}
+      </td>
+      <td className="border-b border-mgs-border-dark px-4 py-2.5 text-right font-mono text-[11px] text-mgs-green-light group-hover:bg-mgs-card">
+        {client.used.toFixed(2)}
       </td>
     </tr>
   );

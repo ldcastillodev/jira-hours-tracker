@@ -59,7 +59,7 @@ export function Dashboard() {
                 minimumFractionDigits: 2,
               })}
               unit="h"
-              sub={`${((data!.totalUsed / data!.totalContracted) * 100).toFixed(2)}% del total`}
+              sub={`${data!.totalContracted > 0 ? ((data!.totalUsed / data!.totalContracted) * 100).toFixed(2) : '—'}% del total`}
               color="#10b981"
             />
             <StatCard

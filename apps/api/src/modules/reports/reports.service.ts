@@ -31,6 +31,7 @@ export class ReportsService {
     const activeEmails = new Set(activeDevs.map((d) => d.email));
 
     const clients = projects.map((project) => {
+      const isBillable = project.components[0]?.isBillable ?? true;
       const used = project.components.reduce(
         (sum, comp) =>
           sum +
@@ -39,13 +40,14 @@ export class ReportsService {
             .reduce((s, w) => s + Number(w.hours), 0),
         0,
       );
-      const contracted = Number(project.monthlyBudget);
-      const remaining = contracted - used;
-      const percentUsed = contracted > 0 ? (used / contracted) * 100 : 0;
+      const contracted = isBillable ? Number(project.monthlyBudget ?? 0) : 0;
+      const remaining = isBillable ? contracted - used : 0;
+      const percentUsed = isBillable && contracted > 0 ? (used / contracted) * 100 : 0;
 
       return {
         projectId: project.id,
         projectName: project.name,
+        isBillable,
         contracted,
         used,
         remaining,
@@ -53,12 +55,13 @@ export class ReportsService {
       };
     });
 
-    const totalContracted = clients.reduce((s, c) => s + c.contracted, 0);
+    const billableClients = clients.filter((c) => c.isBillable);
+    const totalContracted = billableClients.reduce((s, c) => s + c.contracted, 0);
     const totalUsed = clients.reduce((s, c) => s + c.used, 0);
-    const totalRemaining = clients
+    const totalRemaining = billableClients
       .filter((c) => c.remaining >= 0)
       .reduce((s, c) => s + c.remaining, 0);
-    const overBudgetCount = clients.filter((c) => c.remaining < 0).length;
+    const overBudgetCount = billableClients.filter((c) => c.remaining < 0).length;
 
     return { totalContracted, totalUsed, totalRemaining, overBudgetCount, clients };
   }

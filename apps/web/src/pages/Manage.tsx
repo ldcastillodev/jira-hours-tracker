@@ -17,7 +17,7 @@ interface Developer {
 interface Project {
   id: number;
   name: string;
-  monthlyBudget: number;
+  monthlyBudget: number | null;
   components?: { id: number; name: string; isBillable: boolean }[];
 }
 
