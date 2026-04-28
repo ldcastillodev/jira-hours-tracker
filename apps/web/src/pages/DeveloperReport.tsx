@@ -12,7 +12,7 @@ import {
 } from '../components/ui/Skeleton';
 
 export function DeveloperReport() {
-  const { month, label: monthLabel, dateStr } = useMonth();
+  const { month, label: monthLabel } = useMonth();
   const { data, loading, error } = useApi<MonthReportDto>(
     `/reports/developer-workload?month=${month}`,
   );

@@ -45,7 +45,7 @@ export function ClientHoursChart({ clients }: ClientHoursChartProps) {
   return (
     <div className="space-y-5">
       {billable.length > 0 && (
-        <div className="mx-auto max-w-[900px] rounded-xl border border-mgs-border bg-mgs-card-alt p-6">
+        <div className="rounded-xl border border-mgs-border bg-mgs-card-alt p-6">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-2.5">
             <span className="font-mono text-xs uppercase tracking-[1px] text-mgs-text-dim">
               Hours by Project — Billable
@@ -56,7 +56,7 @@ export function ClientHoursChart({ clients }: ClientHoursChartProps) {
               <LegendItem color="#8b5cf6" label="Remaining" />
             </div>
           </div>
-          <div className="min-h-[200px]">
+          <div className="h-[300px]">
             <Bar
               data={{
                 labels: billable.map((c) => c.projectName),
@@ -66,12 +66,14 @@ export function ClientHoursChart({ clients }: ClientHoursChartProps) {
                     data: billable.map((c) => c.contracted),
                     backgroundColor: '#3b82f6',
                     borderRadius: 4,
+                    barThickness: 48,
                   },
                   {
                     label: 'Used',
                     data: billable.map((c) => c.used),
                     backgroundColor: '#10b981',
                     borderRadius: 4,
+                    barThickness: 48,
                   },
                   {
                     label: 'Remaining / Overage',
@@ -80,13 +82,13 @@ export function ClientHoursChart({ clients }: ClientHoursChartProps) {
                       c.remaining < 0 ? '#ef4444' : '#8b5cf6',
                     ),
                     borderRadius: 4,
+                    barThickness: 48,
                   },
                 ],
               }}
               options={{
                 responsive: true,
-                maintainAspectRatio: true,
-                aspectRatio: 2,
+                maintainAspectRatio: false,
                 plugins: { legend: { display: false }, tooltip: tooltipStyle },
                 scales: scaleStyle,
               }}
@@ -96,7 +98,7 @@ export function ClientHoursChart({ clients }: ClientHoursChartProps) {
       )}
 
       {nonBillable.length > 0 && (
-        <div className="mx-auto max-w-[900px] rounded-xl border border-mgs-border bg-mgs-card-alt p-6">
+        <div className="rounded-xl border border-mgs-border bg-mgs-card-alt p-6">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-2.5">
             <span className="font-mono text-xs uppercase tracking-[1px] text-mgs-text-dim">
               Hours by Project — Non-Billable
@@ -105,7 +107,7 @@ export function ClientHoursChart({ clients }: ClientHoursChartProps) {
               <LegendItem color="#8b5cf6" label="Hours Used" />
             </div>
           </div>
-          <div className="min-h-[200px]">
+          <div className="h-[260px]">
             <Bar
               data={{
                 labels: nonBillable.map((c) => c.projectName),
@@ -115,13 +117,13 @@ export function ClientHoursChart({ clients }: ClientHoursChartProps) {
                     data: nonBillable.map((c) => c.used),
                     backgroundColor: '#8b5cf6',
                     borderRadius: 4,
+                    barThickness: 48,
                   },
                 ],
               }}
               options={{
                 responsive: true,
-                maintainAspectRatio: true,
-                aspectRatio: 2.5,
+                maintainAspectRatio: false,
                 plugins: { legend: { display: false }, tooltip: tooltipStyle },
                 scales: scaleStyle,
               }}
