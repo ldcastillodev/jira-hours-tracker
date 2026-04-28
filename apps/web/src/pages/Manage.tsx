@@ -46,7 +46,7 @@ export function Manage() {
       <Header
         title="Manage"
         subtitle="Manage developers, projects and components"
-        badge="CRUD"
+        badge="Manage"
       />
 
       {/* Tabs */}

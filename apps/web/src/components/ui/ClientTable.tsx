@@ -11,15 +11,15 @@ export function ClientTable({ clients }: ClientTableProps) {
   return (
     <div className="space-y-5">
       {billable.length > 0 && (
-        <Section title="Clientes Facturables">
+        <Section title="Billable Projects">
           <table className="w-full border-collapse text-[12.5px]">
             <thead>
               <tr>
-                <Th align="left">Cliente</Th>
-                <Th>Contratadas</Th>
-                <Th>Usadas</Th>
-                <Th>Restantes</Th>
-                <Th>% Usado</Th>
+                <Th align="left">Project</Th>
+                <Th>Contracted</Th>
+                <Th>Used</Th>
+                <Th>Remaining</Th>
+                <Th>% Used</Th>
               </tr>
             </thead>
             <tbody>
@@ -32,12 +32,12 @@ export function ClientTable({ clients }: ClientTableProps) {
       )}
 
       {nonBillable.length > 0 && (
-        <Section title="Clientes No Facturables">
+        <Section title="Non-Billable Projects">
           <table className="w-full border-collapse text-[12.5px]">
             <thead>
               <tr>
-                <Th align="left">Cliente</Th>
-                <Th>Horas Usadas</Th>
+                <Th align="left">Project</Th>
+                <Th>Hours Used</Th>
               </tr>
             </thead>
             <tbody>
@@ -101,7 +101,7 @@ function BillableRow({ client }: { client: ClientHoursDto }) {
         {Math.abs(client.remaining).toFixed(2)}
         {isOver && (
           <span className="ml-1.5 rounded-[3px] border border-mgs-red/25 bg-mgs-red/10 px-[5px] py-[1px] text-[9px] font-bold uppercase tracking-tight text-mgs-red-light">
-            EXCEDIDO
+            OVER BUDGET
           </span>
         )}
       </td>

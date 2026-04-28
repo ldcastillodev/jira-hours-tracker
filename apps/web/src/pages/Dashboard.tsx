@@ -21,8 +21,8 @@ export function Dashboard() {
     return (
       <>
         <Header
-          title="MgS — Client Hours Report"
-          subtitle={`· Datos al ${dateStr}`}
+          title="MgS — Project Hours Report"
+          subtitle={`See the full monthly breakdown of hours spent per project.`}
           badge={monthLabel}
         />
         <div className="rounded-xl border border-mgs-red/30 bg-mgs-red/10 p-6 text-center text-sm text-mgs-red-light">
@@ -35,8 +35,8 @@ export function Dashboard() {
   return (
     <>
       <Header
-        title="MgS — Client Hours Report"
-        subtitle={`· Datos al ${dateStr}`}
+        title="MgS — Project Hours Report"
+        subtitle={`See the full monthly breakdown of hours spent per project.`}
         badge={monthLabel}
       />
 
@@ -47,36 +47,36 @@ export function Dashboard() {
         ) : (
           <>
             <StatCard
-              label="Total Contratadas"
+              label="Total Contracted"
               value={data!.totalContracted.toLocaleString()}
               unit="h"
-              sub="todas las cuentas"
+              sub="all projects"
               color="#3b82f6"
             />
             <StatCard
-              label="Horas Usadas"
+              label="Hours Used"
               value={data!.totalUsed.toLocaleString(undefined, {
                 minimumFractionDigits: 2,
               })}
               unit="h"
-              sub={`${data!.totalContracted > 0 ? ((data!.totalUsed / data!.totalContracted) * 100).toFixed(2) : '—'}% del total`}
+              sub={`${data!.totalContracted > 0 ? ((data!.totalUsed / data!.totalContracted) * 100).toFixed(2) : '—'}% of total`}
               color="#10b981"
             />
             <StatCard
-              label="Horas Restantes"
+              label="Remaining Hours"
               value={data!.totalRemaining.toLocaleString(undefined, {
                 minimumFractionDigits: 1,
               })}
               unit="h"
-              sub="clientes dentro presupuesto"
+              sub="projects within budget"
               color="#8b5cf6"
             />
             <StatCard
-              label="Clientes Excedidos"
+              label="Over-Budget Projects"
               value={String(data!.overBudgetCount)}
-              sub="necesitan revisión"
+              sub="need review"
               color="#ef4444"
-              alert={data!.overBudgetCount > 0 ? 'REVISAR' : undefined}
+              alert={data!.overBudgetCount > 0 ? 'REVIEW' : undefined}
             />
           </>
         )}

@@ -48,12 +48,12 @@ export function ClientHoursChart({ clients }: ClientHoursChartProps) {
         <div className="mx-auto max-w-[900px] rounded-xl border border-mgs-border bg-mgs-card-alt p-6">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-2.5">
             <span className="font-mono text-xs uppercase tracking-[1px] text-mgs-text-dim">
-              Horas por Cliente — Facturables
+              Hours by Project — Billable
             </span>
             <div className="flex flex-wrap gap-4">
-              <LegendItem color="#3b82f6" label="Contratadas" />
-              <LegendItem color="#10b981" label="Usadas" />
-              <LegendItem color="#8b5cf6" label="Restantes" />
+              <LegendItem color="#3b82f6" label="Contracted" />
+              <LegendItem color="#10b981" label="Used" />
+              <LegendItem color="#8b5cf6" label="Remaining" />
             </div>
           </div>
           <div className="min-h-[200px]">
@@ -62,19 +62,19 @@ export function ClientHoursChart({ clients }: ClientHoursChartProps) {
                 labels: billable.map((c) => c.projectName),
                 datasets: [
                   {
-                    label: 'Contratadas',
+                    label: 'Contracted',
                     data: billable.map((c) => c.contracted),
                     backgroundColor: '#3b82f6',
                     borderRadius: 4,
                   },
                   {
-                    label: 'Usadas',
+                    label: 'Used',
                     data: billable.map((c) => c.used),
                     backgroundColor: '#10b981',
                     borderRadius: 4,
                   },
                   {
-                    label: 'Restantes / Excedente',
+                    label: 'Remaining / Overage',
                     data: billable.map((c) => Math.abs(c.remaining)),
                     backgroundColor: billable.map((c) =>
                       c.remaining < 0 ? '#ef4444' : '#8b5cf6',
@@ -99,10 +99,10 @@ export function ClientHoursChart({ clients }: ClientHoursChartProps) {
         <div className="mx-auto max-w-[900px] rounded-xl border border-mgs-border bg-mgs-card-alt p-6">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-2.5">
             <span className="font-mono text-xs uppercase tracking-[1px] text-mgs-text-dim">
-              Horas por Cliente — No Facturables
+              Hours by Project — Non-Billable
             </span>
             <div className="flex flex-wrap gap-4">
-              <LegendItem color="#8b5cf6" label="Horas Usadas" />
+              <LegendItem color="#8b5cf6" label="Hours Used" />
             </div>
           </div>
           <div className="min-h-[200px]">
@@ -111,7 +111,7 @@ export function ClientHoursChart({ clients }: ClientHoursChartProps) {
                 labels: nonBillable.map((c) => c.projectName),
                 datasets: [
                   {
-                    label: 'Usadas',
+                    label: 'Hours Used',
                     data: nonBillable.map((c) => c.used),
                     backgroundColor: '#8b5cf6',
                     borderRadius: 4,

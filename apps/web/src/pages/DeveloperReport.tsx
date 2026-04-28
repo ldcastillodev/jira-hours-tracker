@@ -22,7 +22,7 @@ export function DeveloperReport() {
       <>
         <Header
           title="MgS — Developer Workload"
-          subtitle={`MonthReport · Datos al ${dateStr}`}
+          subtitle={`See the full monthly breakdown of hours spent per developer.`}
           badge={monthLabel}
         />
         <div className="rounded-xl border border-mgs-red/30 bg-mgs-red/10 p-6 text-center text-sm text-mgs-red-light">
@@ -36,7 +36,7 @@ export function DeveloperReport() {
     <>
       <Header
         title="MgS — Developer Workload"
-        subtitle={`MonthReport · Datos al ${dateStr}`}
+        subtitle={`See the full monthly breakdown of hours spent per developer.`}
         badge={monthLabel}
       />
 
