@@ -45,7 +45,7 @@ export function ClientHoursChart({ clients }: ClientHoursChartProps) {
   return (
     <div className="space-y-5">
       {billable.length > 0 && (
-        <div className="rounded-xl border border-mgs-border bg-mgs-card-alt p-6">
+        <div className="mx-auto max-w-[900px] rounded-xl border border-mgs-border bg-mgs-card-alt p-6">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-2.5">
             <span className="font-mono text-xs uppercase tracking-[1px] text-mgs-text-dim">
               Horas por Cliente — Facturables
@@ -56,7 +56,7 @@ export function ClientHoursChart({ clients }: ClientHoursChartProps) {
               <LegendItem color="#8b5cf6" label="Restantes" />
             </div>
           </div>
-          <div className="relative h-[340px]">
+          <div className="min-h-[200px]">
             <Bar
               data={{
                 labels: billable.map((c) => c.projectName),
@@ -85,7 +85,8 @@ export function ClientHoursChart({ clients }: ClientHoursChartProps) {
               }}
               options={{
                 responsive: true,
-                maintainAspectRatio: false,
+                maintainAspectRatio: true,
+                aspectRatio: 2,
                 plugins: { legend: { display: false }, tooltip: tooltipStyle },
                 scales: scaleStyle,
               }}
@@ -95,7 +96,7 @@ export function ClientHoursChart({ clients }: ClientHoursChartProps) {
       )}
 
       {nonBillable.length > 0 && (
-        <div className="rounded-xl border border-mgs-border bg-mgs-card-alt p-6">
+        <div className="mx-auto max-w-[900px] rounded-xl border border-mgs-border bg-mgs-card-alt p-6">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-2.5">
             <span className="font-mono text-xs uppercase tracking-[1px] text-mgs-text-dim">
               Horas por Cliente — No Facturables
@@ -104,7 +105,7 @@ export function ClientHoursChart({ clients }: ClientHoursChartProps) {
               <LegendItem color="#8b5cf6" label="Horas Usadas" />
             </div>
           </div>
-          <div className="relative h-[240px]">
+          <div className="min-h-[200px]">
             <Bar
               data={{
                 labels: nonBillable.map((c) => c.projectName),
@@ -119,7 +120,8 @@ export function ClientHoursChart({ clients }: ClientHoursChartProps) {
               }}
               options={{
                 responsive: true,
-                maintainAspectRatio: false,
+                maintainAspectRatio: true,
+                aspectRatio: 2.5,
                 plugins: { legend: { display: false }, tooltip: tooltipStyle },
                 scales: scaleStyle,
               }}
