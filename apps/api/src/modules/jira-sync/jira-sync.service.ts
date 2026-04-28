@@ -151,8 +151,8 @@ export class JiraSyncService {
     componentName: string,
     issueKey: string,
   ): Promise<'upserted' | 'skipped'> {
-    const component = await this.prisma.component.findUnique({
-      where: { name: componentName },
+    const component = await this.prisma.component.findFirst({
+      where: { name: componentName, deletedAt: null },
     });
 
     if (!component) {

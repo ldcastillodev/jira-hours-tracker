@@ -15,19 +15,28 @@ export class ReportsService {
   async getClientHours(month?: string): Promise<ClientHoursSummaryDto> {
     const dateFilter = month ? this.buildMonthFilter(month) : {};
 
-    const projects = await this.prisma.project.findMany({
-      include: {
-        components: {
-          include: { worklogs: { where: dateFilter } },
+    const [projects, activeDevs] = await Promise.all([
+      this.prisma.project.findMany({
+        where: { deletedAt: null },
+        include: {
+          components: {
+            where: { deletedAt: null },
+            include: { worklogs: { where: dateFilter } },
+          },
         },
-      },
-      orderBy: { name: 'asc' },
-    });
+        orderBy: { name: 'asc' },
+      }),
+      this.prisma.developer.findMany({ where: { deletedAt: null }, select: { email: true } }),
+    ]);
+    const activeEmails = new Set(activeDevs.map((d) => d.email));
 
     const clients = projects.map((project) => {
       const used = project.components.reduce(
         (sum, comp) =>
-          sum + comp.worklogs.reduce((s, w) => s + Number(w.hours), 0),
+          sum +
+          comp.worklogs
+            .filter((w) => activeEmails.has(w.assigned))
+            .reduce((s, w) => s + Number(w.hours), 0),
         0,
       );
       const contracted = Number(project.monthlyBudget);
@@ -59,13 +68,17 @@ export class ReportsService {
     const resolvedMonth = month || this.currentMonth();
 
     const worklogs = await this.prisma.worklog.findMany({
-      where: dateFilter,
+      where: {
+        ...dateFilter,
+        component: { deletedAt: null, project: { deletedAt: null } },
+      },
       include: { component: true },
     });
 
-    // Build a map of email -> developer name
-    const allDevs = await this.prisma.developer.findMany();
+    // Build a map of email -> developer name (active only)
+    const allDevs = await this.prisma.developer.findMany({ where: { deletedAt: null } });
     const devNameMap = new Map(allDevs.map((d) => [d.email, d.name]));
+    const activeEmails = new Set(allDevs.map((d) => d.email));
 
     const devMap = new Map<
       string,
@@ -73,6 +86,7 @@ export class ReportsService {
     >();
 
     for (const w of worklogs) {
+      if (!activeEmails.has(w.assigned)) continue;
       const key = w.assigned;
       const entry = devMap.get(key) || {
         name: devNameMap.get(key) || key,
@@ -111,13 +125,18 @@ export class ReportsService {
     const dateFilter = month ? this.buildMonthFilter(month) : {};
     const resolvedMonth = month || this.currentMonth();
 
-    const components = await this.prisma.component.findMany({
-      include: {
-        project: true,
-        worklogs: { where: dateFilter },
-      },
-      orderBy: { name: 'asc' },
-    });
+    const [components, activeDevs] = await Promise.all([
+      this.prisma.component.findMany({
+        where: { deletedAt: null, project: { deletedAt: null } },
+        include: {
+          project: true,
+          worklogs: { where: dateFilter },
+        },
+        orderBy: { name: 'asc' },
+      }),
+      this.prisma.developer.findMany({ where: { deletedAt: null }, select: { email: true } }),
+    ]);
+    const activeEmails = new Set(activeDevs.map((d) => d.email));
 
     return {
       month: resolvedMonth,
@@ -126,7 +145,9 @@ export class ReportsService {
         componentName: c.name,
         projectName: c.project.name,
         isBillable: c.isBillable,
-        totalHours: c.worklogs.reduce((sum, w) => sum + Number(w.hours), 0),
+        totalHours: c.worklogs
+          .filter((w) => activeEmails.has(w.assigned))
+          .reduce((sum, w) => sum + Number(w.hours), 0),
       })),
     };
   }
@@ -139,6 +160,7 @@ export class ReportsService {
     const worklogs = await this.prisma.worklog.findMany({
       where: {
         date: { gte: day, lt: nextDay },
+        component: { deletedAt: null, project: { deletedAt: null } },
       },
       include: {
         component: true,
@@ -146,17 +168,20 @@ export class ReportsService {
       orderBy: [{ assigned: 'asc' }, { component: { name: 'asc' } }],
     });
 
-    // Resolve developer names from assigned email
-    const allDevs = await this.prisma.developer.findMany();
+    // Resolve developer names from assigned email (active only)
+    const allDevs = await this.prisma.developer.findMany({ where: { deletedAt: null } });
     const devNameMap = new Map(allDevs.map((d) => [d.email, d.name]));
+    const activeEmails = new Set(allDevs.map((d) => d.email));
 
     return {
       date,
-      entries: worklogs.map((w) => ({
-        developerName: devNameMap.get(w.assigned) || w.assigned,
-        componentName: w.component.name,
-        hours: Number(w.hours),
-      })),
+      entries: worklogs
+        .filter((w) => activeEmails.has(w.assigned))
+        .map((w) => ({
+          developerName: devNameMap.get(w.assigned) || w.assigned,
+          componentName: w.component.name,
+          hours: Number(w.hours),
+        })),
     };
   }
 
@@ -181,22 +206,31 @@ export class ReportsService {
     const { period, startDate, projectIds, developerEmails } = params;
     const { start, end } = this.computeDateRange(period, startDate);
 
-    // Build Prisma where clause
-    const where: Record<string, unknown> = {
-      date: { gte: start, lt: end },
+    // Build Prisma where clause — always exclude soft-deleted component/project
+    const componentFilter: Record<string, unknown> = {
+      deletedAt: null,
+      project: { deletedAt: null },
     };
     if (projectIds && projectIds.length > 0) {
-      where.component = { projectId: { in: projectIds } };
+      componentFilter.projectId = { in: projectIds };
     }
+    const where: Record<string, unknown> = {
+      date: { gte: start, lt: end },
+      component: componentFilter,
+    };
     if (developerEmails && developerEmails.length > 0) {
       where.assigned = { in: developerEmails };
     }
 
-    const worklogs = await this.prisma.worklog.findMany({
-      where,
-      include: { component: { include: { project: true } } },
-      orderBy: { date: 'asc' },
-    });
+    const [worklogs, activeDevs] = await Promise.all([
+      this.prisma.worklog.findMany({
+        where,
+        include: { component: { include: { project: true } } },
+        orderBy: { date: 'asc' },
+      }),
+      this.prisma.developer.findMany({ where: { deletedAt: null }, select: { email: true } }),
+    ]);
+    const activeEmails = new Set(activeDevs.map((d) => d.email));
 
     // Build timeline buckets (one per day in range, zero-filled)
     const buckets = new Map<string, { billable: number; nonBillable: number }>();
@@ -210,7 +244,9 @@ export class ReportsService {
     let totalBillable = 0;
     let totalNonBillable = 0;
 
-    const details = worklogs.map((w) => {
+    const details = worklogs
+      .filter((w) => activeEmails.has(w.assigned))
+      .map((w) => {
       const hours = Number(w.hours);
       const billable = w.component.isBillable;
       const dateKey = (w.date as Date).toISOString().slice(0, 10);
@@ -254,7 +290,7 @@ export class ReportsService {
         totalHours: Math.round((totalBillable + totalNonBillable) * 100) / 100,
         billableHours: Math.round(totalBillable * 100) / 100,
         nonBillableHours: Math.round(totalNonBillable * 100) / 100,
-        worklogs: worklogs.length,
+        worklogs: details.length,
       },
       timeline,
       details,

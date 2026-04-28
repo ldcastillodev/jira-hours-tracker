@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Patch, Delete, Param, Body } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Delete, Param, Body, Query } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
 
 @Controller('projects')
@@ -55,6 +55,17 @@ export class ProjectsController {
     return this.projectsService.delete(+id);
   }
 
+  @Patch(':id/restore')
+  restoreProject(
+    @Param('id') id: string,
+    @Query('cascade') cascade?: string,
+  ) {
+    if (cascade === '1' || cascade === 'true') {
+      return this.projectsService.restoreProjectCascade(+id);
+    }
+    return this.projectsService.restoreProject(+id);
+  }
+
   // --- Component endpoints ---
 
   @Get(':id/components')
@@ -81,5 +92,10 @@ export class ProjectsController {
   @Delete('components/:compId')
   deleteComponent(@Param('compId') compId: string) {
     return this.projectsService.deleteComponent(+compId);
+  }
+
+  @Patch('components/:compId/restore')
+  restoreComponent(@Param('compId') compId: string) {
+    return this.projectsService.restoreComponent(+compId);
   }
 }

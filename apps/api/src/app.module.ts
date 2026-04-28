@@ -7,6 +7,8 @@ import { DevelopersModule } from './modules/developers/developers.module';
 import { WorklogsModule } from './modules/worklogs/worklogs.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { JiraSyncModule } from './modules/jira-sync/jira-sync.module';
+import { TrashModule } from './modules/trash/trash.module';
+import { RepairsModule } from './modules/repairs/repairs.module';
 
 @Module({
   imports: [
@@ -18,6 +20,8 @@ import { JiraSyncModule } from './modules/jira-sync/jira-sync.module';
     WorklogsModule,
     ReportsModule,
     JiraSyncModule,
+    TrashModule,
+    RepairsModule,
   ],
 })
 export class AppModule {}

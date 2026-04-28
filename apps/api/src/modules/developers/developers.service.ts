@@ -7,31 +7,24 @@ export class DevelopersService {
 
   findAll() {
     return this.prisma.developer.findMany({
+      where: { deletedAt: null },
       orderBy: { name: 'asc' },
     });
   }
 
   async findOne(id: number) {
-    const dev = await this.prisma.developer.findUnique({ where: { id } });
+    const dev = await this.prisma.developer.findFirst({ where: { id, deletedAt: null } });
     if (!dev) throw new NotFoundException(`Developer ${id} not found`);
     return dev;
   }
 
-  create(data: {
-    name: string;
-    email: string;
-    slackId?: string;
-  }) {
+  create(data: { name: string; email: string; slackId?: string }) {
     return this.prisma.developer.create({ data });
   }
 
   async update(
     id: number,
-    data: {
-      name?: string;
-      email?: string;
-      slackId?: string | null;
-    },
+    data: { name?: string; email?: string; slackId?: string | null },
   ) {
     await this.findOne(id);
     return this.prisma.developer.update({ where: { id }, data });
@@ -39,16 +32,32 @@ export class DevelopersService {
 
   async delete(id: number) {
     await this.findOne(id);
-    try {
-      await this.prisma.developer.delete({ where: { id } });
-      return { deleted: true };
-    } catch (err: any) {
-      if (err.code === 'P2003') {
-        throw new ConflictException(
-          'Cannot delete developer with existing worklogs',
-        );
-      }
-      throw err;
-    }
+    await this.prisma.developer.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+    return { deleted: true };
+  }
+
+  findDeleted() {
+    return this.prisma.developer.findMany({
+      where: { deletedAt: { not: null } },
+      orderBy: { deletedAt: 'desc' },
+    });
+  }
+
+  async restoreDeveloper(id: number) {
+    const dev = await this.prisma.developer.findFirst({
+      where: { id, deletedAt: { not: null } },
+    });
+    if (!dev) throw new NotFoundException(`Deleted developer ${id} not found`);
+    const emailConflict = await this.prisma.developer.findFirst({
+      where: { email: dev.email, deletedAt: null, id: { not: id } },
+    });
+    if (emailConflict)
+      throw new ConflictException(
+        `A developer with email "${dev.email}" already exists.`,
+      );
+    return this.prisma.developer.update({ where: { id }, data: { deletedAt: null } });
   }
 }
