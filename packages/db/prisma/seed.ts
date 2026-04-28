@@ -9,116 +9,51 @@ async function main() {
   await prisma.developer.deleteMany();
   await prisma.project.deleteMany();
 
-  // --- Projects ---
-  const tishmanStudio = await prisma.project.create({
-    data: { name: 'Tishman Studio', monthlyBudget: 292 },
-  });
-  const mgsMarketing = await prisma.project.create({
-    data: { name: 'MgS-Marketing', monthlyBudget: 150 },
-  });
-  const kraftHeinz = await prisma.project.create({
-    data: { name: 'Kraft Heinz - AFH', monthlyBudget: 100 },
-  });
-
-  // --- Components ---
-  const tishmanWeb = await prisma.component.create({
-    data: { name: 'Tishman Web', isBillable: true, projectId: tishmanStudio.id },
-  });
-  const tishmanMobile = await prisma.component.create({
-    data: { name: 'Tishman Mobile', isBillable: true, projectId: tishmanStudio.id },
-  });
-  const tishmanInternal = await prisma.component.create({
-    data: { name: 'Tishman Internal', isBillable: false, projectId: tishmanStudio.id },
-  });
-  const mgsWebsite = await prisma.component.create({
-    data: { name: 'MgS Website', isBillable: true, projectId: mgsMarketing.id },
-  });
-  const mgsSocial = await prisma.component.create({
-    data: { name: 'MgS Social', isBillable: false, projectId: mgsMarketing.id },
-  });
-  const kraftDashboard = await prisma.component.create({
-    data: { name: 'Kraft Dashboard', isBillable: true, projectId: kraftHeinz.id },
-  });
-
-  const components = [tishmanWeb, tishmanMobile, tishmanInternal, mgsWebsite, mgsSocial, kraftDashboard];
-
   // --- Developers ---
-  const devMaria = await prisma.developer.create({
-    data: { name: 'María López', email: 'maria@mgs.com' },
+  await prisma.developer.createMany({
+    data: [
+      { name: 'Luis Castillo',           email: 'luis.castillo@applydigital.com' },
+      { name: 'Sebastian Espindola',     email: 'sebastian.espindola@applydigital.com' },
+      { name: 'Emilio Barboza',          email: 'emilio.barboza@applydigital.com' },
+      { name: 'Jonathan Hernandez',      email: 'jonathan.hernandez@applydigital.com' },
+      { name: 'Brayhan Villalba',        email: 'brayhan.villalba@applydigital.com' },
+      { name: 'Tamara Rivas',            email: 'tamara.rivas@applydigital.com' },
+      { name: 'Oscar Bustos',            email: 'oscar.bustos@applydigital.com' },
+      { name: 'Francisca Jorquera',      email: 'francisca.jorquera@applydigital.com' },
+      { name: 'Francisca Irribarra',     email: 'francisca.irribarra@applydigital.com' },
+      { name: 'Victor Araya',            email: 'victor.araya@applydigital.com' },
+    ],
   });
-  const devCarlos = await prisma.developer.create({
-    data: { name: 'Carlos García', email: 'carlos@mgs.com' },
-  });
-  const devLuis = await prisma.developer.create({
-    data: { name: 'Luis Castillo', email: 'luis@mgs.com', slackId: 'U_LUIS' },
-  });
-  const devAna = await prisma.developer.create({
-    data: { name: 'Ana Martínez', email: 'ana@mgs.com' },
-  });
 
-  const developers = [devMaria, devCarlos, devLuis, devAna];
+  // --- Projects + Components (one component per project) ---
+  const projectsData = [
+    { name: 'Tishman Studio',               componentName: 'Tishman Studio',               monthlyBudget: 292.0, isBillable: true },
+    { name: 'MgS-Black & Veatch',           componentName: 'MgS-Black & Veatch',           monthlyBudget: 80.0,  isBillable: true },
+    { name: 'MgS-Star Trek',                componentName: 'MgS-Star Trek',                monthlyBudget: 50.0,  isBillable: true },
+    { name: 'Tishman Corporate',            componentName: 'Tishman-Corporate',             monthlyBudget: 53.0,  isBillable: true },
+    { name: 'MgS Hours - Others MgS (NB)',  componentName: 'MgS Hours - Others MgS (NB)',  monthlyBudget: 300.0, isBillable: false },
+    { name: 'MgS Hours - Others Apply (NB)',componentName: 'MgS Hours - Others Apply (NB)',monthlyBudget: 300.0, isBillable: false },
+    { name: 'MgS-Marketing',                componentName: 'MgS-Marketing',                monthlyBudget: 150.0, isBillable: true },
+  ];
 
-  // --- Worklogs for current and previous month ---
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
-
-  const worklogs: Array<{
-    jiraWorklogId: string;
-    ticketKey: string;
-    date: Date;
-    hours: number;
-    assigned: string;
-    componentId: number;
-  }> = [];
-
-  let wlCounter = 0;
-
-  function generateMonth(y: number, m: number) {
-    const daysInMonth = new Date(y, m + 1, 0).getDate();
-    for (const dev of developers) {
-      const devComps = components
-        .sort(() => Math.random() - 0.5)
-        .slice(0, 2 + Math.floor(Math.random() * 3));
-
-      for (let day = 1; day <= daysInMonth; day++) {
-        const date = new Date(y, m, day);
-        const dow = date.getDay();
-        if (dow === 0 || dow === 6) continue;
-
-        const entriesPerDay = 1 + Math.floor(Math.random() * 2);
-        for (let e = 0; e < entriesPerDay; e++) {
-          const comp = devComps[Math.floor(Math.random() * devComps.length)];
-          const hours = [0.5, 1, 1.5, 2, 2.5, 3, 4][Math.floor(Math.random() * 7)];
-          wlCounter++;
-          worklogs.push({
-            jiraWorklogId: `seed-wl-${wlCounter}`,
-            ticketKey: `SEED-${wlCounter}`,
-            date,
-            hours,
-            assigned: dev.email,
-            componentId: comp.id,
-          });
-        }
-      }
-    }
+  for (const p of projectsData) {
+    const project = await prisma.project.create({
+      data: { name: p.name, monthlyBudget: p.monthlyBudget },
+    });
+    await prisma.component.create({
+      data: {
+        name: p.componentName,
+        isBillable: p.isBillable,
+        projectId: project.id,
+      },
+    });
   }
 
-  // Current month
-  generateMonth(year, month);
-
-  // Previous month
-  const prevMonth = month === 0 ? 11 : month - 1;
-  const prevYear = month === 0 ? year - 1 : year;
-  generateMonth(prevYear, prevMonth);
-
-  await prisma.worklog.createMany({ data: worklogs });
-
   console.log('Seed completed:', {
-    projects: 3,
-    components: components.length,
-    developers: developers.length,
-    worklogs: worklogs.length,
+    developers: 10,
+    projects: projectsData.length,
+    components: projectsData.length,
+    worklogs: 0,
   });
 }
 
