@@ -12,7 +12,7 @@ import {
 } from '../components/ui/Skeleton';
 
 export function Dashboard() {
-  const { month, label: monthLabel, dateStr } = useMonth();
+  const { month, label: monthLabel } = useMonth();
   const { data, loading, error } = useApi<ClientHoursSummaryDto>(
     `/reports/client-hours?month=${month}`,
   );
@@ -41,43 +41,75 @@ export function Dashboard() {
       />
 
       {/* Stats */}
-      <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
         {loading ? (
-          Array.from({ length: 4 }).map((_, i) => <StatCardSkeleton key={i} />)
+          Array.from({ length: 5 }).map((_, i) => <StatCardSkeleton key={i} />)
         ) : (
           <>
-            <StatCard
-              label="Total Contracted"
-              value={data!.totalContracted.toLocaleString()}
-              unit="h"
-              sub="all projects"
-              color="#3b82f6"
-            />
-            <StatCard
-              label="Hours Used"
-              value={data!.totalUsed.toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-              })}
-              unit="h"
-              sub={`${data!.totalContracted > 0 ? ((data!.totalUsed / data!.totalContracted) * 100).toFixed(2) : '—'}% of total`}
-              color="#10b981"
-            />
-            <StatCard
-              label="Remaining Hours"
-              value={data!.totalRemaining.toLocaleString(undefined, {
-                minimumFractionDigits: 1,
-              })}
-              unit="h"
-              sub="projects within budget"
-              color="#8b5cf6"
-            />
-            <StatCard
-              label="Over-Budget Projects"
-              value={String(data!.overBudgetCount)}
-              sub="need review"
-              color="#ef4444"
-              alert={data!.overBudgetCount > 0 ? 'REVIEW' : undefined}
-            />
+            {(() => {
+              const nearBudget = data!.clients.filter(
+                (c) => c.isBillable && c.percentUsed >= 75 && c.percentUsed < 100,
+              );
+              const nearBudgetSub =
+                nearBudget.length === 0
+                  ? 'all projects within budget'
+                  : nearBudget
+                      .map((c) => `${c.projectName} ${c.percentUsed.toFixed(0)}%`)
+                      .join(', ');
+              const overBudget = data!.clients.filter(
+                (c) => c.isBillable && c.remaining < 0,
+              );
+              const overBudgetSub =
+                overBudget.length === 0
+                  ? 'all projects within budget'
+                  : overBudget
+                      .map((c) => `${c.projectName} ${c.percentUsed.toFixed(0)}%`)
+                      .join(', ');
+              return (
+                <>
+                  <StatCard
+                    label="Total Contracted"
+                    value={data!.totalContracted.toLocaleString()}
+                    unit="h"
+                    sub="all projects"
+                    color="#3b82f6"
+                  />
+                  <StatCard
+                    label="Hours Used"
+                    value={data!.totalUsed.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                    })}
+                    unit="h"
+                    sub={`${data!.totalContracted > 0 ? ((data!.totalUsed / data!.totalContracted) * 100).toFixed(2) : '—'}% of total`}
+                    color="#10b981"
+                  />
+                  <StatCard
+                    label="Remaining Hours"
+                    value={data!.totalRemaining.toLocaleString(undefined, {
+                      minimumFractionDigits: 1,
+                    })}
+                    unit="h"
+                    sub="projects within budget"
+                    color="#8b5cf6"
+                  />
+                  <StatCard
+                    label="Near Limit"
+                    value={String(nearBudget.length)}
+                    sub={nearBudgetSub}
+                    color="#f59e0b"
+                    alert={nearBudget.length > 0 ? 'WARNING' : undefined}
+                    alertColor="#f59e0b"
+                  />
+                  <StatCard
+                    label="Over-Budget Projects"
+                    value={String(data!.overBudgetCount)}
+                    sub={overBudgetSub}
+                    color="#ef4444"
+                    alert={data!.overBudgetCount > 0 ? 'REVIEW' : undefined}
+                  />
+                </>
+              );
+            })()}
           </>
         )}
       </div>
