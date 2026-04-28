@@ -40,12 +40,15 @@ export function DownloadMenu({ report, chartRef }: DownloadMenuProps) {
         }
       : { labels: [], datasets: [] };
 
+    // Resolve project names from details (backend already returns names, not IDs)
+    const projectNames = [...new Set(report.details.map((d) => d.project))];
+
     const filterLines = [
       report.filters.developerEmails.length > 0
         ? `Developers: ${report.filters.developerEmails.join(', ')}`
         : null,
-      report.filters.projectIds.length > 0
-        ? `Projects: ${report.filters.projectIds.join(', ')}`
+      projectNames.length > 0
+        ? `Projects: ${projectNames.join(', ')}`
         : null,
     ]
       .filter(Boolean)
@@ -64,7 +67,7 @@ export function DownloadMenu({ report, chartRef }: DownloadMenuProps) {
     h1 { font-family: monospace; font-size: 18px; font-weight: 700; margin: 0 0 6px; }
     .meta { font-size: 12px; color: ${mutedColor}; margin-bottom: 28px; line-height: 1.9; }
     .card { background: ${cardBg}; border: 1px solid ${border}; border-radius: 12px; padding: 24px; max-width: 1200px; margin: 0 auto; }
-    .chart-container { position: relative; width: 100%; height: 400px; }
+    .chart-container { position: relative; width: 100%; height: 600px; }
     .legend { display: flex; gap: 16px; margin-bottom: 16px; }
     .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: ${mutedColor}; }
     .legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
@@ -86,7 +89,7 @@ export function DownloadMenu({ report, chartRef }: DownloadMenuProps) {
       <div class="legend-item"><div class="legend-dot" style="background:#8b5cf6"></div> Non-Billable</div>
     </div>
     <div class="chart-container">
-    <canvas id="chart" height="320"></canvas>
+    <canvas id="chart"></canvas>
   </div>
   </div>
   <div class="footer">Generated ${new Date().toLocaleString()}</div>
@@ -96,7 +99,7 @@ export function DownloadMenu({ report, chartRef }: DownloadMenuProps) {
       data: ${JSON.stringify(chartData)},
       options: {
         responsive: true,
-        maintainAspectRatio: true,
+        maintainAspectRatio: false,
         plugins: {
           legend: { display: false },
           tooltip: {

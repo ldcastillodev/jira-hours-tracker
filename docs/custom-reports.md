@@ -164,12 +164,14 @@ Menú desplegable con dos opciones de exportación.
 **Chart as HTML:**
 - Lee el tema en tiempo de exportación (`data-theme` attribute)
 - Extrae `chart.data.labels` + `datasets` del `chartRef` activo (refleja el tab visible)
+- La línea de filtros muestra **nombres de proyecto** (derivados de `report.details`), no IDs numéricos
 - Genera HTML standalone con Chart.js 4 vía CDN (`cdn.jsdelivr.net`)
-- Contenedor `max-width: 1200px`, `height: 400px`, `maintainAspectRatio: true` — sin bug de expansión infinita
+- Contenedor `max-width: 1200px`, `height: 600px`, `maintainAspectRatio: false` — el gráfico ocupa todo el ancho disponible
 
 **Data as Excel (.xlsx):**
 - **Sheet "Details":** todas las filas (no paginadas), columnas: Date, Project, Component, Developer, Ticket Key, Hours, Billable. Sin `jiraWorklogId`.
 - **Sheet "Summary":** agrupado por par (Project, Developer) — columnas: Project, Developer, Total Hours, Billable Hours, Non-Billable Hours. Ordenado por Project → Developer. Incluye fila de totales al final.
+  - `Project` muestra siempre el **nombre** (e.g., "MgS"), no el ID numérico — el backend devuelve `w.component.project.name` directamente en `details[].project`.
 
 ---
 

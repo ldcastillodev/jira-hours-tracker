@@ -22,7 +22,7 @@ export function Dashboard() {
       <>
         <Header
           title="MgS — Client Hours Report"
-          subtitle={`Sheet: clientHours · Datos al ${dateStr}`}
+          subtitle={`· Datos al ${dateStr}`}
           badge={monthLabel}
         />
         <div className="rounded-xl border border-mgs-red/30 bg-mgs-red/10 p-6 text-center text-sm text-mgs-red-light">
@@ -36,7 +36,7 @@ export function Dashboard() {
     <>
       <Header
         title="MgS — Client Hours Report"
-        subtitle={`Sheet: clientHours · Datos al ${dateStr}`}
+        subtitle={`· Datos al ${dateStr}`}
         badge={monthLabel}
       />
 
