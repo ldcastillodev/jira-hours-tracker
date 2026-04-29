@@ -54,19 +54,19 @@ export class ProjectsService {
     });
   }
 
-  // --- Restore ---
+  // --- Activate ---
 
-  async restoreProject(id: number) {
+  async activateProject(id: number) {
     const project = await this.prisma.project.findFirst({
       where: { id, deletedAt: { not: null } },
     });
-    if (!project) throw new NotFoundException(`Deleted project ${id} not found`);
+    if (!project) throw new NotFoundException(`Inactive project ${id} not found`);
     const conflict = await this.prisma.project.findFirst({
       where: { name: project.name, deletedAt: null, id: { not: id } },
     });
     if (conflict)
       throw new ConflictException(
-        `A project named "${project.name}" already exists. Rename it before restoring.`,
+        `A project named "${project.name}" already exists. Rename it before activating.`,
       );
     return this.prisma.project.update({
       where: { id },
@@ -74,18 +74,18 @@ export class ProjectsService {
     });
   }
 
-  async restoreProjectCascade(id: number) {
+  async activateProjectCascade(id: number) {
     const project = await this.prisma.project.findFirst({
       where: { id, deletedAt: { not: null } },
       include: { components: { where: { deletedAt: { not: null } } } },
     });
-    if (!project) throw new NotFoundException(`Deleted project ${id} not found`);
+    if (!project) throw new NotFoundException(`Inactive project ${id} not found`);
     const conflict = await this.prisma.project.findFirst({
       where: { name: project.name, deletedAt: null, id: { not: id } },
     });
     if (conflict)
       throw new ConflictException(
-        `A project named "${project.name}" already exists. Rename it before restoring.`,
+        `A project named "${project.name}" already exists. Rename it before activating.`,
       );
     // Check component name conflicts
     for (const comp of project.components) {
@@ -94,7 +94,7 @@ export class ProjectsService {
       });
       if (compConflict)
         throw new ConflictException(
-          `A component named "${comp.name}" already exists. Rename it before restoring.`,
+          `A component named "${comp.name}" already exists. Rename it before activating.`,
         );
     }
     await this.prisma.project.update({ where: { id }, data: { deletedAt: null } });
@@ -102,7 +102,7 @@ export class ProjectsService {
       where: { projectId: id, deletedAt: { not: null } },
       data: { deletedAt: null },
     });
-    return { projectRestored: true, componentsRestored: count };
+    return { projectActivated: true, componentsActivated: count };
   }
 
   // --- Component CRUD ---
@@ -169,17 +169,17 @@ export class ProjectsService {
     return { deleted: true };
   }
 
-  async restoreComponent(id: number) {
+  async activateComponent(id: number) {
     const comp = await this.prisma.component.findFirst({
       where: { id, deletedAt: { not: null } },
     });
-    if (!comp) throw new NotFoundException(`Deleted component ${id} not found`);
+    if (!comp) throw new NotFoundException(`Inactive component ${id} not found`);
     const conflict = await this.prisma.component.findFirst({
       where: { name: comp.name, deletedAt: null },
     });
     if (conflict)
       throw new ConflictException(
-        `A component named "${comp.name}" already exists. Rename it before restoring.`,
+        `A component named "${comp.name}" already exists. Rename it before activating.`,
       );
     return this.prisma.component.update({ where: { id }, data: { deletedAt: null } });
   }

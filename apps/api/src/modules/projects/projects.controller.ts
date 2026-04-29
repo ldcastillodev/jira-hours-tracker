@@ -55,15 +55,15 @@ export class ProjectsController {
     return this.projectsService.delete(+id);
   }
 
-  @Patch(':id/restore')
-  restoreProject(
+  @Patch(':id/activate')
+  activateProject(
     @Param('id') id: string,
     @Query('cascade') cascade?: string,
   ) {
     if (cascade === '1' || cascade === 'true') {
-      return this.projectsService.restoreProjectCascade(+id);
+      return this.projectsService.activateProjectCascade(+id);
     }
-    return this.projectsService.restoreProject(+id);
+    return this.projectsService.activateProject(+id);
   }
 
   // --- Component endpoints ---
@@ -94,8 +94,8 @@ export class ProjectsController {
     return this.projectsService.deleteComponent(+compId);
   }
 
-  @Patch('components/:compId/restore')
-  restoreComponent(@Param('compId') compId: string) {
-    return this.projectsService.restoreComponent(+compId);
+  @Patch('components/:compId/activate')
+  activateComponent(@Param('compId') compId: string) {
+    return this.projectsService.activateComponent(+compId);
   }
 }

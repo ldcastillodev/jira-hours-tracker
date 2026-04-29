@@ -7,7 +7,7 @@ import { TableHeader } from '../../atoms/TableHeader/TableHeader';
 import { Alert } from '../../atoms/Alert/Alert';
 import { showToast } from '../../molecules/Toast/Toast';
 
-interface DeletedProject {
+interface InactiveProject {
   id: number;
   name: string;
   monthlyBudget: number | null;
@@ -15,7 +15,7 @@ interface DeletedProject {
   components: { id: number; name: string; deletedAt: string | null }[];
 }
 
-interface DeletedComponent {
+interface InactiveComponent {
   id: number;
   name: string;
   isBillable: boolean;
@@ -23,23 +23,23 @@ interface DeletedComponent {
   project: { id: number; name: string };
 }
 
-interface DeletedDeveloper {
+interface InactiveDeveloper {
   id: number;
   name: string;
   email: string;
   deletedAt: string;
 }
 
-interface TrashData {
-  projects: DeletedProject[];
-  components: DeletedComponent[];
-  developers: DeletedDeveloper[];
+interface InactiveData {
+  projects: InactiveProject[];
+  components: InactiveComponent[];
+  developers: InactiveDeveloper[];
 }
 
-export function TrashPanel() {
-  const trash = useApi<TrashData>('/trash');
+export function InactivePanel() {
+  const inactive = useApi<InactiveData>('/inactive');
 
-  if (trash.loading) {
+  if (inactive.loading) {
     return (
       <div className="space-y-6 animate-pulse">
         {[1, 2, 3].map((i) => (
@@ -49,15 +49,15 @@ export function TrashPanel() {
     );
   }
 
-  if (trash.error) {
+  if (inactive.error) {
     return (
       <Alert variant="section">
-        {trash.error}
+        {inactive.error}
       </Alert>
     );
   }
 
-  const data = trash.data!;
+  const data = inactive.data!;
   const isEmpty =
     data.projects.length === 0 &&
     data.components.length === 0 &&
@@ -66,7 +66,7 @@ export function TrashPanel() {
   if (isEmpty) {
     return (
       <div className="rounded-xl border border-mgs-border bg-mgs-card-alt px-4 py-12 text-center text-xs text-mgs-text-dim">
-        No deleted items
+        No inactive items
       </div>
     );
   }
@@ -74,65 +74,65 @@ export function TrashPanel() {
   return (
     <div className="space-y-8">
       {data.projects.length > 0 && (
-        <TrashSection title="Deleted Projects">
+        <InactiveSection title="Inactive Projects">
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="border-b border-mgs-border">
                 <Th>Name</Th>
                 <Th>Budget</Th>
-                <Th>Components in Trash</Th>
-                <Th>Deleted At</Th>
+                <Th>Components Inactive</Th>
+                <Th>Deactivated At</Th>
                 <Th className="w-40 text-right">Actions</Th>
               </tr>
             </thead>
             <tbody>
               {data.projects.map((p) => (
-                <ProjectRow key={p.id} project={p} onRefresh={trash.refetch} />
+                <ProjectRow key={p.id} project={p} onRefresh={inactive.refetch} />
               ))}
             </tbody>
           </table>
-        </TrashSection>
+        </InactiveSection>
       )}
 
       {data.components.length > 0 && (
-        <TrashSection title="Deleted Components">
+        <InactiveSection title="Inactive Components">
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="border-b border-mgs-border">
                 <Th>Name</Th>
                 <Th>Project</Th>
                 <Th>Billable</Th>
-                <Th>Deleted At</Th>
+                <Th>Deactivated At</Th>
                 <Th className="w-40 text-right">Actions</Th>
               </tr>
             </thead>
             <tbody>
               {data.components.map((c) => (
-                <ComponentRow key={c.id} component={c} onRefresh={trash.refetch} />
+                <ComponentRow key={c.id} component={c} onRefresh={inactive.refetch} />
               ))}
             </tbody>
           </table>
-        </TrashSection>
+        </InactiveSection>
       )}
 
       {data.developers.length > 0 && (
-        <TrashSection title="Deleted Developers">
+        <InactiveSection title="Inactive Developers">
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="border-b border-mgs-border">
                 <Th>Name</Th>
                 <Th>Email</Th>
-                <Th>Deleted At</Th>
+                <Th>Deactivated At</Th>
                 <Th className="w-40 text-right">Actions</Th>
               </tr>
             </thead>
             <tbody>
               {data.developers.map((d) => (
-                <DeveloperRow key={d.id} developer={d} onRefresh={trash.refetch} />
+                <DeveloperRow key={d.id} developer={d} onRefresh={inactive.refetch} />
               ))}
             </tbody>
           </table>
-        </TrashSection>
+        </InactiveSection>
       )}
     </div>
   );
@@ -140,7 +140,7 @@ export function TrashPanel() {
 
 // ---- Section wrapper ----
 
-function TrashSection({ title, children }: { title: string; children: React.ReactNode }) {
+function InactiveSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
       <h3 className="mb-3 text-[10px] font-semibold uppercase tracking-[1px] text-mgs-text-faint">
@@ -159,21 +159,21 @@ function ProjectRow({
   project,
   onRefresh,
 }: {
-  project: DeletedProject;
+  project: InactiveProject;
   onRefresh: () => void;
 }) {
-  const [loading, setLoading] = useState<'restore' | 'cascade' | null>(null);
-  const trashedComponents = project.components.filter((c) => c.deletedAt !== null);
+  const [loading, setLoading] = useState<'activate' | 'cascade' | null>(null);
+  const inactiveComponents = project.components.filter((c) => c.deletedAt !== null);
 
-  async function handleRestore(cascade = false) {
-    setLoading(cascade ? 'cascade' : 'restore');
+  async function handleActivate(cascade = false) {
+    setLoading(cascade ? 'cascade' : 'activate');
     try {
-      const url = `/projects/${project.id}/restore${cascade ? '?cascade=1' : ''}`;
+      const url = `/projects/${project.id}/activate${cascade ? '?cascade=1' : ''}`;
       await mutateApi(url, 'PATCH');
-      showToast(`Project "${project.name}" restored`);
+      showToast(`Project "${project.name}" activated`);
       onRefresh();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Restore failed', 'error');
+      showToast(err instanceof Error ? err.message : 'Activation failed', 'error');
     } finally {
       setLoading(null);
     }
@@ -183,24 +183,24 @@ function ProjectRow({
     <tr className="border-b border-mgs-border/50 last:border-0">
       <td className="px-4 py-3 font-medium text-mgs-text">{project.name}</td>
       <td className="px-4 py-3 text-mgs-text-muted">{project.monthlyBudget != null ? `${project.monthlyBudget}h` : '—'}</td>
-      <td className="px-4 py-3 text-mgs-text-dim">{trashedComponents.length}</td>
+      <td className="px-4 py-3 text-mgs-text-dim">{inactiveComponents.length}</td>
       <td className="px-4 py-3 text-mgs-text-dim">{formatDate(project.deletedAt)}</td>
       <td className="px-4 py-3 text-right">
-        {trashedComponents.length > 0 ? (
+        {inactiveComponents.length > 0 ? (
           <Button
             variant="link-blue"
             disabled={loading !== null}
-            onClick={() => handleRestore(true)}
+            onClick={() => handleActivate(true)}
           >
-            {loading === 'cascade' ? '…' : 'Restore+Comps'}
+            {loading === 'cascade' ? '…' : 'Activate+Comps'}
           </Button>
         ) : (
           <Button
             variant="link-blue"
             disabled={loading !== null}
-            onClick={() => handleRestore(false)}
+            onClick={() => handleActivate(false)}
           >
-            {loading === 'restore' ? '…' : 'Restore'}
+            {loading === 'activate' ? '…' : 'Activate'}
           </Button>
         )}
       </td>
@@ -214,19 +214,19 @@ function ComponentRow({
   component,
   onRefresh,
 }: {
-  component: DeletedComponent;
+  component: InactiveComponent;
   onRefresh: () => void;
 }) {
   const [loading, setLoading] = useState(false);
 
-  async function handleRestore() {
+  async function handleActivate() {
     setLoading(true);
     try {
-      await mutateApi(`/projects/components/${component.id}/restore`, 'PATCH');
-      showToast(`Component "${component.name}" restored`);
+      await mutateApi(`/projects/components/${component.id}/activate`, 'PATCH');
+      showToast(`Component "${component.name}" activated`);
       onRefresh();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Restore failed', 'error');
+      showToast(err instanceof Error ? err.message : 'Activation failed', 'error');
     } finally {
       setLoading(false);
     }
@@ -252,9 +252,9 @@ function ComponentRow({
         <Button
           variant="link-blue"
           disabled={loading}
-          onClick={handleRestore}
+          onClick={handleActivate}
         >
-          {loading ? '…' : 'Restore'}
+          {loading ? '…' : 'Activate'}
         </Button>
       </td>
     </tr>
@@ -267,19 +267,19 @@ function DeveloperRow({
   developer,
   onRefresh,
 }: {
-  developer: DeletedDeveloper;
+  developer: InactiveDeveloper;
   onRefresh: () => void;
 }) {
   const [loading, setLoading] = useState(false);
 
-  async function handleRestore() {
+  async function handleActivate() {
     setLoading(true);
     try {
-      await mutateApi(`/developers/${developer.id}/restore`, 'PATCH');
-      showToast(`Developer "${developer.name}" restored`);
+      await mutateApi(`/developers/${developer.id}/activate`, 'PATCH');
+      showToast(`Developer "${developer.name}" activated`);
       onRefresh();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Restore failed', 'error');
+      showToast(err instanceof Error ? err.message : 'Activation failed', 'error');
     } finally {
       setLoading(false);
     }
@@ -294,9 +294,9 @@ function DeveloperRow({
         <Button
           variant="link-blue"
           disabled={loading}
-          onClick={handleRestore}
+          onClick={handleActivate}
         >
-          {loading ? '…' : 'Restore'}
+          {loading ? '…' : 'Activate'}
         </Button>
       </td>
     </tr>

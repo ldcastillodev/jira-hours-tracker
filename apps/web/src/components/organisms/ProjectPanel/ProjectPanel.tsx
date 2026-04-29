@@ -135,7 +135,7 @@ export function ProjectPanel({ projects, onRefresh }: ProjectPanelProps) {
         onClose={() => setDeleting(null)}
         onConfirm={handleDelete}
         title="Delete Project"
-        message={<>Are you sure you want to delete <strong className="text-mgs-text">{deleting?.name}</strong>? This action cannot be undone.</>}
+        message={<>Are you sure you want to delete <strong className="text-mgs-text">{deleting?.name}</strong>?</>}
         loading={deleteLoading}
       />
     </div>

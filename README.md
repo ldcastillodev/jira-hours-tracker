@@ -477,3 +477,36 @@ Both `variant` and `className` can be combined — variant sets the base style, 
 - Local `Th` helper functions inside organisms are kept but rewritten to wrap `<TableHeader>` — this avoids changing every call site while still routing through the atom.
 - `ConfirmDialog` replaces the inline `<Modal>` + two `<button>` block that was copy-pasted in DeveloperPanel, ProjectPanel, and ComponentPanel.
 - Zero visual changes — all existing `className` strings were preserved exactly when converting raw elements to atoms.
+
+### Phase 8 — Inactive Records (Trash → Inactive Refactor) ✅
+
+**Scope**: Three interrelated changes — include inactive records in reports if they have worklogs, rename "Trash" to "Inactive" throughout, rename "Restore" to "Activate".
+
+**Delivered**:
+
+**Report query logic (Phase A)**
+- `getClientHours`: split into two queries. Query 1 = active projects (unchanged). Query 2 = worklogs in the period belonging to inactive projects, grouped by `projectId`. Inactive projects with zero hours in the period never appear. Inactive projects with hours participate in over-budget and near-limit calculations.
+- `getDeveloperWorkload`: removed `deletedAt: null` filter from worklog query and developer lookup. Inactive developers with hours in the period now appear in the developer workload table.
+- `getClientSummary`: removed `deletedAt: null` filter from component query; post-filters to show active components always + inactive components only if `worklogs.length > 0` in the period.
+- `getDailySheet`: removed all `deletedAt: null` and `activeEmails` post-filter. All worklogs for the day appear regardless of entity status.
+- `getCustomReport`: removed `deletedAt: null` from component/project filter and `activeEmails` post-filter. Inactive entities appear if they have rows in the date range.
+
+**Terminology rename (Phase B)**
+- `apps/api/src/modules/trash/` renamed to `inactive/`; all three files renamed (`trash.service.ts` → `inactive.service.ts`, etc.)
+- `TrashService` → `InactiveService`, `TrashController` → `InactiveController`, controller path `trash` → `inactive`
+- `TrashModule` → `InactiveModule`; `app.module.ts` import updated
+- `GET /trash` → `GET /inactive`
+- `restoreDeveloper()` → `activateDeveloper()`; `PATCH /developers/:id/restore` → `/activate`
+- `restoreProject/Cascade()` → `activateProject/Cascade()`; `PATCH /projects/:id/restore` → `/activate`
+- `restoreComponent()` → `activateComponent()`; `PATCH /projects/components/:id/restore` → `/activate`
+- Error messages updated: "Deleted … not found" → "Inactive … not found", "before restoring" → "before activating"
+- `TrashPanel` component and directory renamed to `InactivePanel`
+- Manage tab: `'trash'` / `'Trash'` → `'inactive'` / `'Inactive'`
+- All UI strings: "Deleted Items" → "Inactive Items", "Restore" → "Activate", "Restore+Comps" → "Activate+Comps", "Deleted At" → "Deactivated At"
+
+**Key decisions**:
+- Inactive records with worklogs in the period appear in reports without any visual distinction (no `isInactive` flag added to DTOs — the data is factually correct and needs no annotation).
+- Inactive projects with zero hours in the period are excluded from dashboards (less noise).
+- Activation cascade is opt-in (`?cascade=1`) — activating a project does not auto-activate its components unless explicitly requested.
+- `deletedAt` database column name is unchanged — it is an internal implementation detail; user-facing language is "inactive" / "activate".
+- `docs/trash.md` updated in-place to reflect all new behavior and terminology.

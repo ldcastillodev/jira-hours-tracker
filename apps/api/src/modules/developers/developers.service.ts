@@ -46,11 +46,11 @@ export class DevelopersService {
     });
   }
 
-  async restoreDeveloper(id: number) {
+  async activateDeveloper(id: number) {
     const dev = await this.prisma.developer.findFirst({
       where: { id, deletedAt: { not: null } },
     });
-    if (!dev) throw new NotFoundException(`Deleted developer ${id} not found`);
+    if (!dev) throw new NotFoundException(`Inactive developer ${id} not found`);
     const emailConflict = await this.prisma.developer.findFirst({
       where: { email: dev.email, deletedAt: null, id: { not: id } },
     });

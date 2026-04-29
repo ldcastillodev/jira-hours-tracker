@@ -236,7 +236,7 @@ export function ComponentPanel({ components, projects, onRefresh }: ComponentPan
         onClose={() => setDeleting(null)}
         onConfirm={handleDelete}
         title="Delete Component"
-        message={<>Are you sure you want to delete <strong className="text-mgs-text">{deleting?.name}</strong>? This action cannot be undone.</>}
+        message={<>Are you sure you want to delete <strong className="text-mgs-text">{deleting?.name}</strong>?</>}
         loading={deleteLoading}
       />
     </div>

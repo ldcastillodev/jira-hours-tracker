@@ -6,7 +6,7 @@ import { Button } from '../../atoms/Button/Button';
 import { DeveloperPanel } from '../../organisms/DeveloperPanel/DeveloperPanel';
 import { ProjectPanel } from '../../organisms/ProjectPanel/ProjectPanel';
 import { ComponentPanel } from '../../organisms/ComponentPanel/ComponentPanel';
-import { TrashPanel } from '../../organisms/TrashPanel/TrashPanel';
+import { InactivePanel } from '../../organisms/InactivePanel/InactivePanel';
 import { TableSkeleton } from '../../atoms/Skeleton/Skeleton';
 
 interface Developer {
@@ -23,13 +23,13 @@ interface Project {
   components?: { id: number; name: string; isBillable: boolean }[];
 }
 
-type Tab = 'developers' | 'projects' | 'components' | 'trash';
+type Tab = 'developers' | 'projects' | 'components' | 'inactive';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'developers', label: 'Developers' },
   { id: 'projects', label: 'Projects' },
   { id: 'components', label: 'Components' },
-  { id: 'trash', label: 'Trash' },
+  { id: 'inactive', label: 'Inactive' },
 ];
 
 export function Manage() {
@@ -109,7 +109,7 @@ export function Manage() {
         </>
       )}
 
-      {activeTab === 'trash' && <TrashPanel />}
+      {activeTab === 'inactive' && <InactivePanel />}
     </>
   );
 }

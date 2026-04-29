@@ -58,8 +58,8 @@ export class DevelopersController {
     return this.developersService.delete(+id);
   }
 
-  @Patch(':id/restore')
-  restore(@Param('id') id: string) {
-    return this.developersService.restoreDeveloper(+id);
+  @Patch(':id/activate')
+  activate(@Param('id') id: string) {
+    return this.developersService.activateDeveloper(+id);
   }
 }
