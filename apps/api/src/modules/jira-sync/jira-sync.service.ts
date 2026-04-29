@@ -38,14 +38,14 @@ export class JiraSyncService {
     private readonly configService: ConfigService,
   ) {}
 
-  async syncWorklogs(sinceDate?: string) {
+  async syncWorklogs(startDate: string, endDate: string) {
     const baseUrl = this.configService.get<string>('JIRA_BASE_URL');
     const email = this.configService.get<string>('JIRA_EMAIL');
     const apiToken = this.configService.get<string>('JIRA_API_TOKEN');
 
     if (!baseUrl || !email || !apiToken) {
       this.logger.warn('Jira credentials not configured — skipping sync');
-      return { status: 'skipped', message: 'Jira credentials not configured' };
+      return { status: 'skipped' as const, message: 'Jira credentials not configured' };
     }
 
     const auth = Buffer.from(`${email}:${apiToken}`).toString('base64');
@@ -55,9 +55,9 @@ export class JiraSyncService {
       "Content-Type": "application/json",
     };
 
-    const since = sinceDate || this.defaultSinceDate();
-    const sinceMs = new Date(since).getTime();
-    this.logger.log(`Starting Jira sync since ${since}`);
+    const startMs = new Date(startDate).getTime();
+    const endMs = new Date(endDate).getTime() + 24 * 60 * 60 * 1000; // exclusive end of day
+    this.logger.log(`Starting Jira sync: ${startDate} to ${endDate}`);
 
     // ── Step 1: Load DB lookup tables once ──────────────────────────────────
     const [dbComponents, dbDevelopers] = await Promise.all([
@@ -78,7 +78,7 @@ export class JiraSyncService {
     let nextPageToken: string | undefined;
 
     do {
-      const jql = `component in (${componentNames.map((c) => `"${c}"`).join(',')}) AND worklogDate >= "${since}"`;
+      const jql = `component in (${componentNames.map((c) => `"${c}"`).join(',')}) AND worklogDate >= "${startDate}" AND worklogDate <= "${endDate}"`;
       const url = `${baseUrl}/rest/api/3/search/jql`;
       const body: Record<string, unknown> = {
         jql,
@@ -106,7 +106,8 @@ export class JiraSyncService {
           : await this.fetchAllIssueWorklogs(baseUrl, issue.key, headers);
 
       for (const wl of worklogs) {
-        if (new Date(wl.started).getTime() >= sinceMs) {
+        const ts = new Date(wl.started).getTime();
+        if (ts >= startMs && ts < endMs) {
           rawEntries.push({ wl, componentName, issueKey: issue.key });
         }
       }
@@ -182,8 +183,7 @@ export class JiraSyncService {
     );
 
     return {
-      status: 'completed',
-      since,
+      status: 'completed' as const,
       totalProcessed,
       inserted: totalInserted,
       updated: totalUpdated,
@@ -252,8 +252,4 @@ export class JiraSyncService {
     return { inserted: toCreate.length, updated: toUpdate.length };
   }
 
-  private defaultSinceDate(): string {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-  }
 }
