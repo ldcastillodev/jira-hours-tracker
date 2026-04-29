@@ -569,4 +569,33 @@ Both `variant` and `className` can be combined — variant sets the base style, 
 - CustomReports shows a nudge rather than auto-refreshing — resetting filter state and active dev/project tabs mid-session is worse UX than a prompt.
 - No cross-page refresh for Manage CRUD (e.g. deleting a developer doesn't refresh DeveloperReport) — navigating to another page already triggers a fresh mount and fetch.
 
+### Phase 12 — Worklog Change Detection + Orphan Soft-Delete ✅
+
+**Scope**: Make Jira sync aware of modified and deleted worklogs, and eliminate redundant DB writes for unchanged records.
+
+**Problem**: The previous sync wrote every worklog unconditionally — records that hadn't changed still triggered an UPDATE, and worklogs deleted in Jira were never removed from the DB.
+
+**Delivered**:
+- **`deletedAt` on `Worklog`**: New nullable `DateTime` column (migration `20260429130226_add_worklog_soft_delete`). Soft-delete is consistent with Project/Component/Developer. Soft-deleted worklogs are excluded from all reports via `deletedAt: null` filters.
+- **New `@@index([date])`** on `Worklog` — speeds up the date-range preload query.
+- **DB preload (Step 5)**: One `findMany` loads all existing worklogs for the synced date range into a `Map` and `Set`. Replaces the per-chunk existence check that was added in Phase 9.
+- **Three-way split (Step 6)**: In-memory comparison against the preloaded map: worklogs are categorized as `toCreate`, `toUpdate` (mutable fields changed), or `unchanged` (skipped, no DB write). Orphan detection identifies DB records not returned by Jira as `toSoftDelete`.
+- **Change detection**: Compares `hours` (float tolerance `0.0001`), `date` (timestamp equality), `ticketKey`. `assigned` and `componentId` are treated as immutable.
+- **Orphan soft-delete**: All orphaned `jiraWorklogId`s are soft-deleted in a single `updateMany` statement — scoped strictly to the synced date range.
+- **Report isolation**: Added `deletedAt: null` to all 5 worklog `findMany` calls (4 in `reports.service.ts`, 1 in `worklogs.service.ts`).
+- **Updated response**: Includes `worklogsDeleted`, `worklogsUnchanged`. Toast message appends `· N removed` only when orphans were found.
+
+**Query reduction**:
+
+| Scenario | Phase 9 | Phase 12 |
+|----------|---------|---------|
+| 500 worklogs, 80% unchanged | ~12 queries + 400 redundant UPDATEs | ~5 queries + 0 redundant writes |
+| Orphan detection | Not supported | 1 `updateMany` |
+
+**Key decisions**:
+- Soft delete over hard delete — consistent with the rest of the app; orphaned worklogs can be investigated if needed.
+- Orphan scope: only the synced date range — prevents accidentally soft-deleting worklogs from other months.
+- `assigned` and `componentId` immutable after creation — they are set based on Jira data at insert time and not expected to change in practice.
+- Orphaned worklogs are not shown in the Inactive panel — they are invisible to the user (clean UX, no noise).
+
 See `docs/jira-sync.md` for the full implementation reference.

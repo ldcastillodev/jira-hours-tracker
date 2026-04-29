@@ -151,42 +151,129 @@ export class JiraSyncService {
       });
     }
 
-    this.logger.log(`${records.length} valid worklogs to upsert, ${skippedCount} skipped`);
+    this.logger.log(`${records.length} valid worklogs from Jira, ${skippedCount} skipped`);
 
-    // ── Step 5: Batch upsert in chunks of 200 ────────────────────────────────
+    // ── Step 5: Load all existing DB worklogs for the date range (1 query) ──
+    const dbWorklogs = await this.prisma.worklog.findMany({
+      where: {
+        date: { gte: new Date(startDate), lte: new Date(endDate) },
+        deletedAt: null,
+      },
+      select: { jiraWorklogId: true, hours: true, date: true, ticketKey: true },
+    });
+
+    const dbMap = new Map(dbWorklogs.map((w) => [w.jiraWorklogId, w]));
+    const dbIdSet = new Set(dbWorklogs.map((w) => w.jiraWorklogId));
+
+    this.logger.debug(`Found ${dbMap.size} existing worklogs in DB for date range`);
+
+    // ── Step 6: Three-way in-memory split (0 queries) ────────────────────────
+    interface UpsertRecord {
+      jiraWorklogId: string;
+      ticketKey: string;
+      assigned: string;
+      hours: number;
+      date: Date;
+      componentId: number;
+    }
+
+    const toCreate: UpsertRecord[] = [];
+    const toUpdate: UpsertRecord[] = [];
+
+    for (const record of records) {
+      const existing = dbMap.get(record.jiraWorklogId);
+      if (!existing) {
+        toCreate.push(record);
+      } else {
+        const hoursChanged = Math.abs(Number(existing.hours) - record.hours) > 0.0001;
+        const dateChanged = (existing.date as Date).getTime() !== record.date.getTime();
+        const ticketChanged = existing.ticketKey !== record.ticketKey;
+        if (hoursChanged || dateChanged || ticketChanged) {
+          toUpdate.push(record);
+        }
+        // else: unchanged — skip entirely (no write)
+      }
+    }
+
+    const jiraIdSet = new Set(records.map((r) => r.jiraWorklogId));
+    const toSoftDelete = [...dbIdSet].filter((id) => !jiraIdSet.has(id));
+    const unchangedCount = records.length - toCreate.length - toUpdate.length;
+
+    this.logger.log(
+      `Split: ${toCreate.length} to create, ${toUpdate.length} to update, ` +
+      `${unchangedCount} unchanged, ${toSoftDelete.length} to soft-delete`,
+    );
+
+    // ── Step 7: Batch write in chunks of 200 ────────────────────────────────
     const CHUNK_SIZE = 200;
-    const totalChunks = Math.ceil(records.length / CHUNK_SIZE);
     let totalInserted = 0;
     let totalUpdated = 0;
 
-    for (let i = 0; i < records.length; i += CHUNK_SIZE) {
-      const chunk = records.slice(i, i + CHUNK_SIZE);
-      const chunkIndex = Math.floor(i / CHUNK_SIZE) + 1;
-
+    // Process creates
+    const createChunks = Math.ceil(toCreate.length / CHUNK_SIZE);
+    for (let i = 0; i < toCreate.length; i += CHUNK_SIZE) {
+      const chunk = toCreate.slice(i, i + CHUNK_SIZE);
+      const chunkIdx = Math.floor(i / CHUNK_SIZE) + 1;
       try {
-        const { inserted, updated } = await this.batchUpsertChunk(chunk);
-        totalInserted += inserted;
-        totalUpdated += updated;
-        this.logger.log(
-          `Chunk ${chunkIndex}/${totalChunks}: ${inserted} inserted, ${updated} updated`,
-        );
+        await this.prisma.worklog.createMany({ data: chunk });
+        totalInserted += chunk.length;
+        this.logger.log(`Create chunk ${chunkIdx}/${createChunks}: ${chunk.length} inserted`);
       } catch (err) {
         this.logger.error(
-          `Chunk ${chunkIndex}/${totalChunks} failed (IDs ${chunk[0].jiraWorklogId}…${chunk[chunk.length - 1].jiraWorklogId}): ${(err as Error).message}`,
+          `Create chunk ${chunkIdx}/${createChunks} failed: ${(err as Error).message}`,
         );
       }
     }
 
-    const totalProcessed = totalInserted + totalUpdated;
+    // Process updates
+    const updateChunks = Math.ceil(toUpdate.length / CHUNK_SIZE);
+    for (let i = 0; i < toUpdate.length; i += CHUNK_SIZE) {
+      const chunk = toUpdate.slice(i, i + CHUNK_SIZE);
+      const chunkIdx = Math.floor(i / CHUNK_SIZE) + 1;
+      try {
+        await this.prisma.$transaction(async (tx) => {
+          for (const r of chunk) {
+            await tx.worklog.update({
+              where: { jiraWorklogId: r.jiraWorklogId },
+              data: { hours: r.hours, date: r.date, ticketKey: r.ticketKey },
+            });
+          }
+        });
+        totalUpdated += chunk.length;
+        this.logger.log(`Update chunk ${chunkIdx}/${updateChunks}: ${chunk.length} updated`);
+      } catch (err) {
+        this.logger.error(
+          `Update chunk ${chunkIdx}/${updateChunks} failed: ${(err as Error).message}`,
+        );
+      }
+    }
+
+    // Soft-delete orphans in one bulk statement
+    let totalDeleted = 0;
+    if (toSoftDelete.length > 0) {
+      try {
+        const result = await this.prisma.worklog.updateMany({
+          where: { jiraWorklogId: { in: toSoftDelete } },
+          data: { deletedAt: new Date() },
+        });
+        totalDeleted = result.count;
+        this.logger.log(`Soft-deleted ${totalDeleted} orphaned worklogs`);
+      } catch (err) {
+        this.logger.error(`Soft-delete failed: ${(err as Error).message}`);
+      }
+    }
+
     this.logger.log(
-      `Sync complete: ${totalProcessed} processed (${totalInserted} inserted, ${totalUpdated} updated), ${skippedCount} skipped`,
+      `Sync complete: ${totalInserted} inserted, ${totalUpdated} updated, ` +
+      `${totalDeleted} deleted, ${unchangedCount} unchanged, ${skippedCount} skipped`,
     );
 
     return {
       status: 'completed' as const,
-      totalProcessed,
       inserted: totalInserted,
       updated: totalUpdated,
+      deleted: totalDeleted,
+      unchanged: unchangedCount,
       skippedCount,
     };
   }
@@ -211,45 +298,10 @@ export class JiraSyncService {
 
       if (startAt + data.maxResults >= data.total) break;
       startAt += data.maxResults;
-    } while (true);  
+    } while (true);
 
     return worklogs;
   }
 
-  private async batchUpsertChunk(
-    records: Array<{
-      jiraWorklogId: string;
-      ticketKey: string;
-      assigned: string;
-      hours: number;
-      date: Date;
-      componentId: number;
-    }>,
-  ): Promise<{ inserted: number; updated: number }> {
-    const ids = records.map((r) => r.jiraWorklogId);
-
-    const existing = await this.prisma.worklog.findMany({
-      where: { jiraWorklogId: { in: ids } },
-      select: { jiraWorklogId: true },
-    });
-    const existingIdSet = new Set(existing.map((w) => w.jiraWorklogId));
-
-    const toCreate = records.filter((r) => !existingIdSet.has(r.jiraWorklogId));
-    const toUpdate = records.filter((r) => existingIdSet.has(r.jiraWorklogId));
-
-    await this.prisma.$transaction(async (tx) => {
-      if (toCreate.length > 0) {
-        await tx.worklog.createMany({ data: toCreate });
-      }
-      for (const r of toUpdate) {
-        await tx.worklog.update({
-          where: { jiraWorklogId: r.jiraWorklogId },
-          data: { hours: r.hours, date: r.date },
-        });
-      }
-    });
-
-    return { inserted: toCreate.length, updated: toUpdate.length };
-  }
-
 }
+

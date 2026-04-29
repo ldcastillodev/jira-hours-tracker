@@ -8,7 +8,7 @@ export class WorklogsService {
   findAll(month?: string) {
     const where = month ? this.buildMonthFilter(month) : {};
     return this.prisma.worklog.findMany({
-      where,
+      where: { ...where, deletedAt: null },
       include: { component: true },
       orderBy: { date: 'desc' },
     });

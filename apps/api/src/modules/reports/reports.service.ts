@@ -32,6 +32,7 @@ export class ReportsService {
     const inactiveWorklogs = await this.prisma.worklog.findMany({
       where: {
         ...dateFilter,
+        deletedAt: null,
         component: { project: { deletedAt: { not: null } } },
       },
       include: { component: { include: { project: true } } },
@@ -116,7 +117,7 @@ export class ReportsService {
 
     // Include all worklogs — active and inactive components/projects/developers
     const worklogs = await this.prisma.worklog.findMany({
-      where: { ...dateFilter },
+      where: { ...dateFilter, deletedAt: null },
       include: { component: true },
     });
 
@@ -163,7 +164,7 @@ export class ReportsService {
     const components = await this.prisma.component.findMany({
       include: {
         project: true,
-        worklogs: { where: dateFilter },
+        worklogs: { where: { ...dateFilter, deletedAt: null } },
       },
       orderBy: { name: 'asc' },
     });
@@ -192,7 +193,7 @@ export class ReportsService {
 
     // Include all worklogs for the day (active and inactive components/developers)
     const worklogs = await this.prisma.worklog.findMany({
-      where: { date: { gte: day, lt: nextDay } },
+      where: { date: { gte: day, lt: nextDay }, deletedAt: null },
       include: { component: true },
       orderBy: [{ assigned: 'asc' }, { component: { name: 'asc' } }],
     });
@@ -235,6 +236,7 @@ export class ReportsService {
     // Build Prisma where clause — no deletedAt filter; inactive records included if they have worklogs
     const where: Record<string, unknown> = {
       date: { gte: start, lt: end },
+      deletedAt: null,
     };
     if (projectIds && projectIds.length > 0) {
       where.component = { projectId: { in: projectIds } };

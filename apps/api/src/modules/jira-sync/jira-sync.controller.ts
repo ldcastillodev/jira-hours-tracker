@@ -31,14 +31,20 @@ export class JiraSyncController {
     }
 
     const monthName = new Date(currentYear, month - 1, 1).toLocaleString('en-US', { month: 'long' });
+    const synced = result.inserted + result.updated;
+    const parts = [`Synced ${synced} changes from ${monthName} ${currentYear}`];
+    if (result.deleted > 0) parts.push(`${result.deleted} removed`);
+
     return {
       success: true,
-      message: `Synced ${result.totalProcessed} worklogs from ${monthName} ${currentYear}`,
+      message: parts.join(' · '),
       month,
       year: currentYear,
-      worklogsSynced: result.totalProcessed,
+      worklogsSynced: synced,
       worklogsCreated: result.inserted,
       worklogsUpdated: result.updated,
+      worklogsDeleted: result.deleted,
+      worklogsUnchanged: result.unchanged,
       skipped: result.skippedCount,
     };
   }
