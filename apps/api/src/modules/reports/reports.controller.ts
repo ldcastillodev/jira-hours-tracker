@@ -1,48 +1,35 @@
-import { Controller, Get, Query, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { ReportsService } from './reports.service';
+import { MonthQueryDto } from './dto/month-query.dto';
+import { GetDailyQueryDto } from './dto/get-daily-query.dto';
+import { GetCustomReportQueryDto } from './dto/get-custom-report-query.dto';
 
 @Controller('reports')
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 
   @Get('client-hours')
-  getClientHours(@Query('month') month?: string) {
-    return this.reportsService.getClientHours(month);
+  getClientHours(@Query() query: MonthQueryDto) {
+    return this.reportsService.getClientHours(query.month);
   }
 
   @Get('developer-workload')
-  getDeveloperWorkload(@Query('month') month?: string) {
-    return this.reportsService.getDeveloperWorkload(month);
+  getDeveloperWorkload(@Query() query: MonthQueryDto) {
+    return this.reportsService.getDeveloperWorkload(query.month);
   }
 
   @Get('client-summary')
-  getClientSummary(@Query('month') month?: string) {
-    return this.reportsService.getClientSummary(month);
+  getClientSummary(@Query() query: MonthQueryDto) {
+    return this.reportsService.getClientSummary(query.month);
   }
 
   @Get('daily')
-  getDailySheet(@Query('date') date: string) {
-    return this.reportsService.getDailySheet(date);
+  getDailySheet(@Query() query: GetDailyQueryDto) {
+    return this.reportsService.getDailySheet(query.date);
   }
 
   @Get('custom')
-  getCustomReport(
-    @Query('period') period: string,
-    @Query('startDate') startDate: string,
-    @Query('projectIds') projectIds?: string,
-    @Query('developerEmails') developerEmails?: string,
-  ) {
-    if (!period || !['day', 'week', 'month'].includes(period)) {
-      throw new BadRequestException('period must be "day", "week", or "month"');
-    }
-    if (!startDate || !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
-      throw new BadRequestException('startDate must be a valid YYYY-MM-DD date');
-    }
-    return this.reportsService.getCustomReport({
-      period: period as 'day' | 'week' | 'month',
-      startDate,
-      projectIds: projectIds ? projectIds.split(',').map(Number).filter(Boolean) : undefined,
-      developerEmails: developerEmails ? developerEmails.split(',').map((e) => e.trim()).filter(Boolean) : undefined,
-    });
+  getCustomReport(@Query() query: GetCustomReportQueryDto) {
+    return this.reportsService.getCustomReport(query);
   }
 }

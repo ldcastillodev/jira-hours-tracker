@@ -1,13 +1,16 @@
 import { Controller, Get, Post, Put, Param, Query, Body } from '@nestjs/common';
 import { WorklogsService } from './worklogs.service';
+import { GetWorklogsQueryDto } from './dto/get-worklogs-query.dto';
+import { CreateWorklogDto } from './dto/create-worklog.dto';
+import { UpdateWorklogDto } from './dto/update-worklog.dto';
 
 @Controller('worklogs')
 export class WorklogsController {
   constructor(private readonly worklogsService: WorklogsService) {}
 
   @Get()
-  findAll(@Query('month') month?: string) {
-    return this.worklogsService.findAll(month);
+  findAll(@Query() query: GetWorklogsQueryDto) {
+    return this.worklogsService.findAll(query.month);
   }
 
   @Get(':id')
@@ -16,30 +19,12 @@ export class WorklogsController {
   }
 
   @Post()
-  create(
-    @Body()
-    body: {
-      date: string;
-      hours: number;
-      jiraWorklogId: string;
-      ticketKey: string;
-      assigned: string;
-      componentId: number;
-    },
-  ) {
-    return this.worklogsService.create(body);
+  create(@Body() dto: CreateWorklogDto) {
+    return this.worklogsService.create(dto);
   }
 
   @Put(':id')
-  update(
-    @Param('id') id: string,
-    @Body()
-    body: {
-      date?: string;
-      hours?: number;
-      componentId?: number;
-    },
-  ) {
-    return this.worklogsService.update(+id, body);
+  update(@Param('id') id: string, @Body() dto: UpdateWorklogDto) {
+    return this.worklogsService.update(+id, dto);
   }
 }

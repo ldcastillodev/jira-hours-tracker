@@ -1,5 +1,9 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CreateProjectDto } from './dto/create-project.dto';
+import { UpdateProjectDto } from './dto/update-project.dto';
+import { CreateComponentDto } from './dto/create-component.dto';
+import { UpdateComponentDto } from './dto/update-component.dto';
 
 @Injectable()
 export class ProjectsService {
@@ -22,13 +26,13 @@ export class ProjectsService {
     return project;
   }
 
-  create(data: { name: string; monthlyBudget?: number | null }) {
+  create(data: CreateProjectDto) {
     return this.prisma.project.create({
       data: { name: data.name, monthlyBudget: data.monthlyBudget },
     });
   }
 
-  async update(id: number, data: { name?: string; monthlyBudget?: number | null }) {
+  async update(id: number, data: UpdateProjectDto) {
     await this.findOne(id);
     return this.prisma.project.update({ where: { id }, data });
   }
@@ -123,7 +127,7 @@ export class ProjectsService {
     });
   }
 
-  async createComponent(projectId: number, data: { name: string; isBillable: boolean }) {
+  async createComponent(projectId: number, data: CreateComponentDto) {
     // 1:1 enforcement — project may only have one active component
     const existingForProject = await this.prisma.component.findFirst({
       where: { projectId, deletedAt: null },
@@ -143,7 +147,7 @@ export class ProjectsService {
     });
   }
 
-  async updateComponent(id: number, data: { name?: string; isBillable?: boolean }) {
+  async updateComponent(id: number, data: UpdateComponentDto) {
     const comp = await this.prisma.component.findFirst({ where: { id, deletedAt: null } });
     if (!comp) throw new NotFoundException(`Component ${id} not found`);
     if (data.name && data.name !== comp.name) {

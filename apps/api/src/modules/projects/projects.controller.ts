@@ -1,5 +1,10 @@
 import { Controller, Get, Post, Put, Patch, Delete, Param, Body, Query } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
+import { CreateProjectDto } from './dto/create-project.dto';
+import { UpdateProjectDto } from './dto/update-project.dto';
+import { CreateComponentDto } from './dto/create-component.dto';
+import { UpdateComponentDto } from './dto/update-component.dto';
+import { ActivateProjectQueryDto } from './dto/activate-project-query.dto';
 
 @Controller('projects')
 export class ProjectsController {
@@ -16,38 +21,18 @@ export class ProjectsController {
   }
 
   @Post()
-  create(
-    @Body()
-    body: {
-      name: string;
-      monthlyBudget: number;
-    },
-  ) {
-    return this.projectsService.create(body);
+  create(@Body() dto: CreateProjectDto) {
+    return this.projectsService.create(dto);
   }
 
   @Put(':id')
-  update(
-    @Param('id') id: string,
-    @Body()
-    body: {
-      name?: string;
-      monthlyBudget?: number;
-    },
-  ) {
-    return this.projectsService.update(+id, body);
+  update(@Param('id') id: string, @Body() dto: UpdateProjectDto) {
+    return this.projectsService.update(+id, dto);
   }
 
   @Patch(':id')
-  patch(
-    @Param('id') id: string,
-    @Body()
-    body: {
-      name?: string;
-      monthlyBudget?: number;
-    },
-  ) {
-    return this.projectsService.update(+id, body);
+  patch(@Param('id') id: string, @Body() dto: UpdateProjectDto) {
+    return this.projectsService.update(+id, dto);
   }
 
   @Delete(':id')
@@ -56,11 +41,8 @@ export class ProjectsController {
   }
 
   @Patch(':id/activate')
-  activateProject(
-    @Param('id') id: string,
-    @Query('cascade') cascade?: string,
-  ) {
-    if (cascade === '1' || cascade === 'true') {
+  activateProject(@Param('id') id: string, @Query() query: ActivateProjectQueryDto) {
+    if (query.cascade) {
       return this.projectsService.activateProjectCascade(+id);
     }
     return this.projectsService.activateProject(+id);
@@ -74,19 +56,13 @@ export class ProjectsController {
   }
 
   @Post(':id/components')
-  createComponent(
-    @Param('id') id: string,
-    @Body() body: { name: string; isBillable: boolean },
-  ) {
-    return this.projectsService.createComponent(+id, body);
+  createComponent(@Param('id') id: string, @Body() dto: CreateComponentDto) {
+    return this.projectsService.createComponent(+id, dto);
   }
 
   @Patch('components/:compId')
-  updateComponent(
-    @Param('compId') compId: string,
-    @Body() body: { name?: string; isBillable?: boolean },
-  ) {
-    return this.projectsService.updateComponent(+compId, body);
+  updateComponent(@Param('compId') compId: string, @Body() dto: UpdateComponentDto) {
+    return this.projectsService.updateComponent(+compId, dto);
   }
 
   @Delete('components/:compId')

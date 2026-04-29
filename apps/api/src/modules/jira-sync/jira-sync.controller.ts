@@ -1,21 +1,19 @@
 import { BadRequestException, Controller, Post, Query } from '@nestjs/common';
 import { JiraSyncService } from './jira-sync.service';
+import { TriggerSyncQueryDto } from './dto/trigger-sync-query.dto';
 
 @Controller('jira-sync')
 export class JiraSyncController {
   constructor(private readonly jiraSyncService: JiraSyncService) {}
 
   @Post('trigger')
-  async triggerSync(@Query('month') monthParam?: string) {
+  async triggerSync(@Query() query: TriggerSyncQueryDto) {
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth() + 1;
 
-    const month = monthParam !== undefined ? parseInt(monthParam, 10) : currentMonth;
+    const month = query.month ?? currentMonth;
 
-    if (isNaN(month) || month < 1 || month > 12) {
-      throw new BadRequestException('month must be between 1 and 12');
-    }
     if (month > currentMonth) {
       throw new BadRequestException('Cannot sync future months');
     }

@@ -1,5 +1,7 @@
 import { Controller, Get, Post, Put, Patch, Delete, Param, Body } from '@nestjs/common';
 import { DevelopersService } from './developers.service';
+import { CreateDeveloperDto } from './dto/create-developer.dto';
+import { UpdateDeveloperDto } from './dto/update-developer.dto';
 
 @Controller('developers')
 export class DevelopersController {
@@ -16,41 +18,18 @@ export class DevelopersController {
   }
 
   @Post()
-  create(
-    @Body()
-    body: {
-      name: string;
-      email: string;
-      slackId?: string;
-    },
-  ) {
-    return this.developersService.create(body);
+  create(@Body() dto: CreateDeveloperDto) {
+    return this.developersService.create(dto);
   }
 
   @Put(':id')
-  update(
-    @Param('id') id: string,
-    @Body()
-    body: {
-      name?: string;
-      email?: string;
-      slackId?: string | null;
-    },
-  ) {
-    return this.developersService.update(+id, body);
+  update(@Param('id') id: string, @Body() dto: UpdateDeveloperDto) {
+    return this.developersService.update(+id, dto);
   }
 
   @Patch(':id')
-  patch(
-    @Param('id') id: string,
-    @Body()
-    body: {
-      name?: string;
-      email?: string;
-      slackId?: string | null;
-    },
-  ) {
-    return this.developersService.update(+id, body);
+  patch(@Param('id') id: string, @Body() dto: UpdateDeveloperDto) {
+    return this.developersService.update(+id, dto);
   }
 
   @Delete(':id')

@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CreateDeveloperDto } from './dto/create-developer.dto';
+import { UpdateDeveloperDto } from './dto/update-developer.dto';
 
 @Injectable()
 export class DevelopersService {
@@ -18,14 +20,11 @@ export class DevelopersService {
     return dev;
   }
 
-  create(data: { name: string; email: string; slackId?: string }) {
+  create(data: CreateDeveloperDto) {
     return this.prisma.developer.create({ data });
   }
 
-  async update(
-    id: number,
-    data: { name?: string; email?: string; slackId?: string | null },
-  ) {
+  async update(id: number, data: UpdateDeveloperDto) {
     await this.findOne(id);
     return this.prisma.developer.update({ where: { id }, data });
   }

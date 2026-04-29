@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CreateWorklogDto } from './dto/create-worklog.dto';
+import { UpdateWorklogDto } from './dto/update-worklog.dto';
 
 @Injectable()
 export class WorklogsService {
@@ -23,14 +25,7 @@ export class WorklogsService {
     return worklog;
   }
 
-  create(data: {
-    date: string;
-    hours: number;
-    jiraWorklogId: string;
-    ticketKey: string;
-    assigned: string;
-    componentId: number;
-  }) {
+  create(data: CreateWorklogDto) {
     return this.prisma.worklog.create({
       data: {
         date: new Date(data.date),
@@ -43,14 +38,7 @@ export class WorklogsService {
     });
   }
 
-  async update(
-    id: number,
-    data: {
-      date?: string;
-      hours?: number;
-      componentId?: number;
-    },
-  ) {
+  async update(id: number, data: UpdateWorklogDto) {
     await this.findOne(id);
     return this.prisma.worklog.update({
       where: { id },
