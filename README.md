@@ -599,3 +599,71 @@ Both `variant` and `className` can be combined — variant sets the base style, 
 - Orphaned worklogs are not shown in the Inactive panel — they are invisible to the user (clean UX, no noise).
 
 See `docs/jira-sync.md` for the full implementation reference.
+
+### Phase 13 — DTO Validation Refactor ✅
+
+**Scope**: Replace inline anonymous body/query types with validated DTOs across all API controllers. Add a global `ValidationPipe` so invalid requests are rejected at the framework level before reaching service code.
+
+**Delivered**:
+- **`class-validator` + `class-transformer`** installed in `@mgs/api`.
+- **Global `ValidationPipe`** in `main.ts` with `whitelist: true`, `forbidNonWhitelisted: true`, `transform: true` — strips unknown properties, rejects requests with unrecognised fields, and coerces strings to their declared types.
+- **14 DTOs created** across 5 modules:
+
+| Module | DTOs |
+|---|---|
+| developers | `CreateDeveloperDto`, `UpdateDeveloperDto` |
+| projects | `CreateProjectDto`, `UpdateProjectDto`, `CreateComponentDto`, `UpdateComponentDto`, `ActivateProjectQueryDto` |
+| worklogs | `GetWorklogsQueryDto`, `CreateWorklogDto`, `UpdateWorklogDto` |
+| reports | `MonthQueryDto`, `GetDailyQueryDto`, `GetCustomReportQueryDto` |
+| jira-sync | `TriggerSyncQueryDto` |
+
+- **Manual validation removed from controllers**: `ReportsController.getCustomReport` previously did a manual `period` enum check + `startDate` regex; `JiraSyncController.triggerSync` did `parseInt`, NaN guard, and range check; `ProjectsController.activateProject` compared `cascade` as a string. All moved into DTOs via `@IsIn`, `@IsDateString`, `@IsInt`, `@Min`/`@Max`, and `@Transform`.
+- **CSV→array transforms** for `projectIds` and `developerEmails` query params moved into `GetCustomReportQueryDto` via `@Transform` — controllers pass the DTO directly to the service with no pre-processing.
+- **Service method signatures** updated to accept DTO types (`CreateDeveloperDto`, `UpdateDeveloperDto`, etc.) instead of anonymous inline objects.
+- **Zero type errors** — `npx tsc --noEmit -p apps/api/tsconfig.json` passes.
+
+**Key decisions**:
+- Global pipe over per-controller pipes — one configuration point, consistent behaviour everywhere.
+- `whitelist + forbidNonWhitelisted` — rejects unknown properties (security hardening against property injection).
+- Cross-field validation (e.g. `startDate < endDate`) left in the service — keeps DTOs simple and avoids custom validator complexity.
+- No response DTOs — Swagger is not installed; response classes would be unused overhead.
+
+### Phase 14 — Unit Test Suite ✅
+
+**Scope**: Comprehensive unit test coverage for all services and controllers. Zero real data anywhere — all tests use dummy/fictitious fixtures. Prisma and all external services are fully mocked.
+
+**Delivered**:
+
+**Infrastructure**
+- `jest`, `ts-jest`, `@types/jest`, `@nestjs/testing` installed as dev dependencies in `@mgs/api`.
+- `jest.config.ts` — ts-jest preset, `moduleNameMapper` resolving `@mgs/db` and `@mgs/shared` workspace packages for test compilation without a prior build step.
+- `tsconfig.spec.json` — extends `tsconfig.json`, includes `src/` and `test/`, relaxes `strictPropertyInitialization` (standard NestJS test pattern).
+- `test`, `test:cov` scripts added to `apps/api/package.json`. Root-level `npm test` delegates to Turbo.
+
+**Test helpers**
+- `test/helpers/mock-prisma.ts` — `createMockPrismaService()` factory returning a fresh deep-mock of `PrismaService` per test suite. Each model method is a `jest.Mock<any>` — no TypeScript inference issues.
+- `test/fixtures/dummy-data.ts` — hardcoded deterministic fixtures: `DUMMY_DEVELOPERS` (3, `test.devN@example.com`), `DUMMY_PROJECTS` (2, `Test Project Alpha/Beta`), `DUMMY_COMPONENTS` (2, one billable, one non-billable), `DUMMY_WORKLOGS` (4, `test-wl-001…004`, `TEST-1…4` ticket keys).
+- `test/mocks/jira-responses.ts` — `DUMMY_JIRA_SEARCH_RESPONSE` with 2 dummy issues and 4 worklogs. No real Jira data.
+
+**11 test suites, 77 tests, 0 failures** (2.5s)
+
+| Suite | Tests |
+|---|---|
+| `developers.service.spec.ts` | findAll, findOne (found/404), create, update (found/404), delete (soft/404), activateDeveloper (success/404/conflict) |
+| `projects.service.spec.ts` | project CRUD, cascade soft-delete, activate (success/404/conflict), cascade activate (success/component-conflict), createComponent (1:1 enforcement/name conflict), updateComponent, deleteComponent (cascade), activateComponent |
+| `worklogs.service.spec.ts` | findAll (with/without month), findOne (found/404), create, update |
+| `reports.service.spec.ts` | getClientHours (aggregation, over-budget), getDeveloperWorkload (per-developer), getClientSummary (inactive exclusion), getDailySheet, getCustomReport (filter params) |
+| `jira-sync.service.spec.ts` | missing credentials → skip, new worklogs (create), changed hours (update), unchanged (skip, 0 writes), orphan (soft-delete), unknown component (skip) |
+| `repairs.service.spec.ts` | syncComponent (found/404) |
+| `inactive.service.spec.ts` | findAll aggregates all soft-deleted entities |
+| `developers.controller.spec.ts` | endpoint wiring for all 6 routes |
+| `projects.controller.spec.ts` | endpoint wiring, cascade dispatch for activate |
+| `reports.controller.spec.ts` | query DTO passthrough for all 5 report endpoints |
+| `jira-sync.controller.spec.ts` | month defaulting, future-month guard, success/skipped response shape, message suffix presence |
+
+**Key decisions**:
+- Unit tests only (no integration/E2E with real DB) — services are thin Prisma wrappers; mocking covers all logic paths at lower cost and higher speed.
+- Hardcoded fixtures over Faker — deterministic outputs, no transient test failures due to random data.
+- No `.env.test` needed — Prisma is fully mocked; tests never connect to any database.
+- `@nestjs/testing` `Test.createTestingModule` with `.overrideProvider(PrismaService).useValue(mock)` — standard NestJS testing pattern.
+- Jira sync date-matching in tests uses the exact timestamp from the mocked Jira response (`2026-01-05T09:00:00.000Z`) to avoid spurious date-change detection in the three-way split.
