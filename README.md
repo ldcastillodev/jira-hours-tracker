@@ -510,3 +510,30 @@ Both `variant` and `className` can be combined — variant sets the base style, 
 - Activation cascade is opt-in (`?cascade=1`) — activating a project does not auto-activate its components unless explicitly requested.
 - `deletedAt` database column name is unchanged — it is an internal implementation detail; user-facing language is "inactive" / "activate".
 - `docs/trash.md` updated in-place to reflect all new behavior and terminology.
+
+### Phase 9 — Jira Sync Batch Upsert Optimization ✅
+
+**Scope**: Eliminate per-worklog database queries in `JiraSyncService` by loading lookup tables once and upserting in chunks.
+
+**Problem**: The original implementation issued ~3 DB queries per worklog (`component.findFirst`, `developer.findUnique`, `worklog.upsert`). For 500 worklogs this meant ~1,500 sequential round-trips.
+
+**Delivered**:
+- **Two upfront lookups**: All active components and all developers are loaded into memory once at sync start via `Promise.all`. Subsequent validation is O(1) Map/Set lookup — zero queries per worklog.
+- **In-memory transform**: Each worklog is validated against `componentMap` and `developerEmails` in memory. Invalid entries (no matching component or developer) are counted as `skippedCount` and never hit the DB.
+- **`batchUpsertChunk()`**: New private method processing up to 200 records at a time. Issues one `findMany` to detect existing IDs, then executes a single `$transaction` with `createMany` for new records + individual `update` calls for existing ones.
+- **Error isolation**: Each chunk is wrapped in `try/catch` — a failure logs the chunk index and first/last `jiraWorklogId`, then continues to the next chunk. One bad chunk does not abort the sync.
+- **Improved return value**: Response now includes `inserted` and `updated` counts separately (previously only `upsertedCount`).
+
+**Query reduction**:
+
+| Scenario | Before | After |
+|----------|--------|-------|
+| 500 worklogs | ~1,500 queries | ~12 queries |
+| 2,000 worklogs | ~6,000 queries | ~42 queries |
+
+**Key decisions**:
+- Chunk size of 200 keeps each transaction small enough to avoid lock contention while staying well within Prisma/Postgres parameter limits.
+- `createMany` for inserts (one statement) + individual `update` for updates within the same transaction — Prisma does not expose a bulk `updateMany` with per-row data without raw SQL.
+- No schema changes, no new dependencies. Only `jira-sync.service.ts` was modified.
+
+See `docs/jira-sync.md` for implementation details and query count comparison.
