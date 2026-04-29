@@ -1,4 +1,10 @@
-# Jira Sync — Batch Upsert Optimization
+# Jira Sync — Batch Upsert Optimization & Month Selector
+
+## Features
+
+1. **Month selector** — trigger a sync for any past month of the current year from the nav bar
+2. **Batch upsert** — replace per-worklog DB queries with bulk operations
+3. **UI auto-refresh** — all open dashboards refresh automatically after a sync completes
 
 ## Problem
 
@@ -91,25 +97,84 @@ Each chunk is wrapped in a `try/catch`. If one chunk fails (e.g. a transient DB 
 
 This prevents a single bad record or network blip from aborting the entire sync.
 
-### Return value
-
-The response now distinguishes inserts from updates:
-
 ```json
 {
-  "status": "completed",
-  "since": "2026-04-01",
-  "totalProcessed": 487,
-  "inserted": 312,
-  "updated": 175,
-  "skippedCount": 13
+  "success": true,
+  "message": "Synced 487 worklogs from February 2026",
+  "month": 2,
+  "year": 2026,
+  "worklogsSynced": 487,
+  "worklogsCreated": 312,
+  "worklogsUpdated": 175,
+  "skipped": 13
 }
 ```
+
+## Month Selector (Frontend)
+
+The "Sync Jira" button in the nav bar opens a dropdown listing all 12 months of the current year:
+
+- **Current month** is marked with a `•` prefix
+- **Future months** are dimmed and non-clickable
+- Selecting a month closes the dropdown and immediately starts the sync
+- The button shows a spinner and `Syncing...` while the request is in flight
+- On completion the toast message comes directly from the API response (e.g. `"Synced 45 worklogs from February 2026"`)
+
+Validation is enforced at both layers:
+- **Frontend**: future month buttons have `pointer-events-none`
+- **Backend**: `BadRequestException` if `month > currentMonth`
+
+## Endpoint
+
+```
+POST /jira-sync/trigger?month=2
+```
+
+- `month`: 1–12 (1 = January). Omit to default to the current month.
+- `year` is always the server's current year — no parameter accepted.
+- Validation throws `400 Bad Request` for invalid or future months.
+
+Date range for the selected month:
+```
+startDate = YYYY-MM-01
+endDate   = YYYY-MM-{last day of month}
+```
+
+JQL clause: `worklogDate >= "${startDate}" AND worklogDate <= "${endDate}"`
+
+## UI Auto-Refresh
+
+After a sync completes, all open dashboard pages automatically re-fetch their data without a page reload.
+
+**Implementation** — module-level event bus in `apps/web/src/hooks/useApi.ts`:
+
+```ts
+export function emitDataRefresh() {
+  window.dispatchEvent(new CustomEvent('mgs:data-refresh'));
+}
+
+export function useDataRefresh(callback: () => void) {
+  // registers a listener; uses a ref so it never re-registers on re-renders
+}
+```
+
+| Location | Behavior |
+|----------|----------|
+| `AppShell` (`SyncButton`) | calls `emitDataRefresh()` after a successful sync |
+| `Dashboard` | calls `useDataRefresh(refetch)` — chart + stat cards reload |
+| `DeveloperReport` | calls `useDataRefresh(refetch)` — chart + table reload |
+| `CustomReports` | shows an amber "Jira data was synced — re-generate for updated results" banner (dismissible); does not auto-refresh to avoid resetting active filter state |
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `apps/api/src/modules/jira-sync/jira-sync.service.ts` | Replaced `upsertWorklog()` with `batchUpsertChunk()`; rewrote `syncWorklogs()` body |
+| `apps/api/src/modules/jira-sync/jira-sync.service.ts` | Replaced `upsertWorklog()` with `batchUpsertChunk()`; rewrote `syncWorklogs(startDate, endDate)` |
+| `apps/api/src/modules/jira-sync/jira-sync.controller.ts` | Accepts `?month=1-12`; validates and computes date range; reshapes response |
+| `apps/web/src/hooks/useApi.ts` | Added `emitDataRefresh()` and `useDataRefresh()` exports |
+| `apps/web/src/components/templates/AppShell/AppShell.tsx` | `SyncButton` replaced with month-selector dropdown; calls `emitDataRefresh()` after sync |
+| `apps/web/src/components/pages/Dashboard/Dashboard.tsx` | Added `useDataRefresh(refetch)` |
+| `apps/web/src/components/pages/DeveloperReport/DeveloperReport.tsx` | Added `useDataRefresh(refetch)` |
+| `apps/web/src/components/pages/CustomReports/CustomReports.tsx` | Added stale hint banner + `useDataRefresh` |
 
-No schema changes. No new dependencies. No changes to `jira-sync.controller.ts` or `jira-sync.module.ts`.
+No schema changes. No new npm dependencies.

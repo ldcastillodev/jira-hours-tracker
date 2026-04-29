@@ -1,5 +1,5 @@
 import type { MonthReportDto } from '@mgs/shared';
-import { useApi } from '../../../hooks/useApi';
+import { useApi, useDataRefresh } from '../../../hooks/useApi';
 import { useMonth } from '../../../hooks/useMonth';
 import { Header } from '../../atoms/Header/Header';
 import { StatCard } from '../../atoms/StatCard/StatCard';
@@ -14,9 +14,10 @@ import {
 
 export function DeveloperReport() {
   const { month, label: monthLabel } = useMonth();
-  const { data, loading, error } = useApi<MonthReportDto>(
+  const { data, loading, error, refetch } = useApi<MonthReportDto>(
     `/reports/developer-workload?month=${month}`,
   );
+  useDataRefresh(refetch);
 
   if (error) {
     return (

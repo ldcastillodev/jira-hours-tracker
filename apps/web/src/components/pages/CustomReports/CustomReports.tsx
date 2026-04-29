@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo } from 'react';
 import type { CustomReportDto, CustomReportDetailDto } from '@mgs/shared';
 import type { Chart as ChartJS } from 'chart.js';
-import { useApi } from '../../../hooks/useApi';
+import { useApi, useDataRefresh } from '../../../hooks/useApi';
 import { fetchApi } from '../../../services/api';
 import { Header } from '../../atoms/Header/Header';
 import { StatCard } from '../../atoms/StatCard/StatCard';
@@ -64,6 +64,9 @@ export function CustomReports() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastFilters, setLastFilters] = useState<FilterValues | null>(null);
+  const [stale, setStale] = useState(false);
+
+  useDataRefresh(() => { if (report) setStale(true); });
 
   // Tab state
   const [activeDevTab, setActiveDevTab] = useState<string>('__all__');
@@ -75,6 +78,7 @@ export function CustomReports() {
   async function handleGenerate(values: FilterValues) {
     setLoading(true);
     setError(null);
+    setStale(false);
     setLastFilters(values);
     setActiveDevTab('__all__');
     setActiveProjTab('__all__');
@@ -158,6 +162,20 @@ export function CustomReports() {
           onSubmit={handleGenerate}
           loading={loading}
         />
+
+        {stale && report && (
+          <div className="flex items-center justify-between rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5">
+            <span className="font-mono text-xs text-amber-400">
+              Jira data was synced — re-generate for updated results.
+            </span>
+            <button
+              onClick={() => setStale(false)}
+              className="font-mono text-xs text-mgs-text-dim hover:text-mgs-text"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
 
         {loading && (
           <div className="flex items-center justify-center rounded-xl border border-mgs-border bg-mgs-card-alt py-16">

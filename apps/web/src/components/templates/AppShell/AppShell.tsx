@@ -3,6 +3,7 @@ import { NavLink, useSearchParams, useLocation } from 'react-router-dom';
 import { MonthPicker } from '../../molecules/MonthPicker/MonthPicker';
 import { mutateApi } from '../../../services/api';
 import { showToast } from '../../molecules/Toast/Toast';
+import { emitDataRefresh } from '../../../hooks/useApi';
 import { useTheme } from '../../../hooks/useTheme';
 import { Button } from '../../atoms/Button/Button';
 import { Spinner } from '../../atoms/Spinner/Spinner';
@@ -100,6 +101,7 @@ function SyncButton() {
         'POST',
       );
       showToast(result.message);
+      emitDataRefresh();
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Sync failed', 'error');
     } finally {

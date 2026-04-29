@@ -536,4 +536,37 @@ Both `variant` and `className` can be combined — variant sets the base style, 
 - `createMany` for inserts (one statement) + individual `update` for updates within the same transaction — Prisma does not expose a bulk `updateMany` with per-row data without raw SQL.
 - No schema changes, no new dependencies. Only `jira-sync.service.ts` was modified.
 
-See `docs/jira-sync.md` for implementation details and query count comparison.
+### Phase 10 — Jira Sync Month Selector ✅
+
+**Scope**: Replace the one-click "Sync Jira" button with a month-selector dropdown so users can sync any past month of the current year.
+
+**Delivered**:
+- **Dropdown UX**: Clicking "Sync Jira" opens a panel listing all 12 months of the current year. Current month is marked with `•`. Future months are dimmed and non-clickable (`pointer-events-none`). Selecting a month closes the dropdown and triggers the sync immediately.
+- **Backend `?month=M` param**: `POST /jira-sync/trigger?month=1–12` replaces `?since=YYYY-MM-DD`. Controller computes `startDate` (1st of month) and `endDate` (last day of month), validates the month is not in the future, and passes both to the service.
+- **Service date range**: `syncWorklogs(startDate, endDate)` — both bounds are now required. JQL includes `worklogDate <= "${endDate}"`. Step 3 in-memory filter is `ts >= startMs && ts < endMs`. `defaultSinceDate()` removed.
+- **Improved response**: `{ success, message, month, year, worklogsSynced, worklogsCreated, worklogsUpdated, skipped }`.
+- **Backward compat**: omitting `?month` defaults to the current month.
+
+**Key decisions**:
+- `?month=1-12` over `?since=YYYY-MM-DD` — cleaner API for fixed-month semantics; custom date ranges are out of scope.
+- Dropdown (not `<select>`) — matches the existing dark-theme button style; `<select>` doesn't support custom styling easily.
+- Validation at both layers (frontend disables future months; backend throws `BadRequestException`) — defense in depth.
+
+### Phase 11 — UI Auto-Refresh After Data Mutations ✅
+
+**Scope**: Automatically refresh open dashboard pages after a Jira sync completes without a full page reload.
+
+**Delivered**:
+- **Event bus in `useApi.ts`**: Two new exports — `emitDataRefresh()` (fires a `CustomEvent` on `window`) and `useDataRefresh(callback)` (registers a listener, uses a `useRef` internally so it never re-registers on re-renders). No new files, no new dependencies.
+- **Dashboard**: subscribes with `useDataRefresh(refetch)` — chart, stat cards, and table reload automatically after sync.
+- **DeveloperReport**: same — chart and table reload.
+- **CustomReports**: instead of auto-refreshing (which would reset active filter/tab state), shows a dismissible amber banner "Jira data was synced — re-generate for updated results." Banner is set on `emitDataRefresh` only if a report is already loaded; cleared when user clicks "Generate" again.
+- **Manage panels**: already refresh independently via `onRefresh` callbacks — no changes needed.
+
+**Key decisions**:
+- Native DOM `CustomEvent` over React Context — no re-render overhead; works from non-React code if ever needed.
+- `callbackRef` pattern in `useDataRefresh` — listener registered once per mount, always calls the latest callback version.
+- CustomReports shows a nudge rather than auto-refreshing — resetting filter state and active dev/project tabs mid-session is worse UX than a prompt.
+- No cross-page refresh for Manage CRUD (e.g. deleting a developer doesn't refresh DeveloperReport) — navigating to another page already triggers a fresh mount and fetch.
+
+See `docs/jira-sync.md` for the full implementation reference.
