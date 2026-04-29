@@ -8,17 +8,17 @@ Time-tracking reporting system migrated from Google Sheets to a production-grade
 |-------|-----------|---------------|
 | Monorepo | Turborepo + npm workspaces | — |
 | Frontend | React 19 + Vite + Tailwind CSS v4 + Chart.js | Vercel |
-| Backend | NestJS 11 | Koyeb (free tier) |
-| Database | PostgreSQL (Neon/Supabase) via Prisma ORM | — |
+| Backend | NestJS 11 | Vercel Serverless Functions |
+| Database | PostgreSQL (Neon) via Prisma ORM | — |
 
 ## Project Structure
 
 ```
 mgs-clients/
+├── api/
+│   └── [...path].ts                # Vercel serverless catch-all handler
 ├── apps/
 │   ├── api/                        # NestJS backend
-│   │   ├── Dockerfile              # Multi-stage Docker build for Koyeb
-│   │   ├── Procfile                # Koyeb buildpack entrypoint
 │   │   └── src/
 │   │       ├── modules/
 │   │       │   ├── health/         # GET /health (cold start check)
@@ -30,7 +30,6 @@ mgs-clients/
 │   │       └── prisma/             # PrismaService (injectable)
 │   │
 │   └── web/                        # React frontend
-│       ├── vercel.json             # SPA rewrites for Vercel
 │       └── src/
            ├── components/         # Atomic Design hierarchy
            │   ├── atoms/          # Primitives (HTML + Tailwind only)
@@ -85,6 +84,7 @@ mgs-clients/
 │       └── src/dto/
 │
 ├── turbo.json
+├── vercel.json                     # Vercel build + function config
 ├── docker-compose.yml              # Local PostgreSQL (Docker)
 ├── package.json
 └── .env.example
@@ -123,9 +123,12 @@ Para desarrollo local con Docker, usa estos valores en `.env`:
 
 ```env
 DATABASE_URL="postgresql://mgs:mgs_local@localhost:5432/mgs_clients"
+DIRECT_DATABASE_URL="postgresql://mgs:mgs_local@localhost:5432/mgs_clients"
 API_PORT=3001
 CORS_ORIGIN="http://localhost:5173"
 ```
+
+> `DIRECT_DATABASE_URL` se usa para migraciones (bypasea pgbouncer). En local ambas variables apuntan a la misma DB.
 
 > Las variables de Jira (`JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`) solo son necesarias si vas a usar el sync con Jira. Para datos de prueba, el seed es suficiente.
 
@@ -159,9 +162,9 @@ Esto arranca ambos servers vía Turborepo:
 |----------|-----|-------------|
 | Frontend | `http://localhost:5173` | React + Vite (hot reload) |
 | API | `http://localhost:3001` | NestJS (watch mode) |
-| Health | `http://localhost:3001/health` | Verificar que la API está viva |
+| Health | `http://localhost:3001/api/health` | Verificar que la API está viva |
 
-El frontend proxea `/api/*` → `localhost:3001` automáticamente en dev.
+El frontend proxea `/api/*` → `localhost:3001/api/*` automáticamente en dev.
 
 ### Comandos útiles
 
@@ -189,46 +192,48 @@ Three core models replicate the Google Sheets structure:
 
 ## API Endpoints
 
+All paths are prefixed with `/api` (global NestJS prefix).
+
 ### Projects
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/projects` | List all top-level projects with children |
-| `GET` | `/projects/:id` | Get single project with children + parent |
-| `POST` | `/projects` | Create project (`name`, `monthlyBudget?`, `parentId?`) |
-| `PUT` | `/projects/:id` | Update project fields |
-| `PATCH` | `/projects/:id` | Partial update project fields |
-| `DELETE` | `/projects/:id` | Delete project (409 if has worklogs or children) |
+| `GET` | `/api/projects` | List all top-level projects with children |
+| `GET` | `/api/projects/:id` | Get single project with children + parent |
+| `POST` | `/api/projects` | Create project (`name`, `monthlyBudget?`, `parentId?`) |
+| `PUT` | `/api/projects/:id` | Update project fields |
+| `PATCH` | `/api/projects/:id` | Partial update project fields |
+| `DELETE` | `/api/projects/:id` | Delete project (409 if has worklogs or children) |
 
 ### Developers
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/developers` | List all developers |
-| `GET` | `/developers/:id` | Get single developer |
-| `POST` | `/developers` | Create developer (`name`, `email`, `jiraAccountId?`, `slackId?`) |
-| `PUT` | `/developers/:id` | Update developer fields |
-| `PATCH` | `/developers/:id` | Partial update developer fields |
-| `DELETE` | `/developers/:id` | Delete developer (409 if has worklogs) |
+| `GET` | `/api/developers` | List all developers |
+| `GET` | `/api/developers/:id` | Get single developer |
+| `POST` | `/api/developers` | Create developer (`name`, `email`, `jiraAccountId?`, `slackId?`) |
+| `PUT` | `/api/developers/:id` | Update developer fields |
+| `PATCH` | `/api/developers/:id` | Partial update developer fields |
+| `DELETE` | `/api/developers/:id` | Delete developer (409 if has worklogs) |
 
 ### Worklogs
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/worklogs?month=YYYY-MM` | List worklogs, optionally filtered by month |
-| `GET` | `/worklogs/:id` | Get single worklog with project + developer |
-| `POST` | `/worklogs` | Create worklog (`date`, `hours`, `projectId`, `developerId`, `isBillable?`, `jiraIssueId?`) |
-| `PUT` | `/worklogs/:id` | Update worklog fields |
+| `GET` | `/api/worklogs?month=YYYY-MM` | List worklogs, optionally filtered by month |
+| `GET` | `/api/worklogs/:id` | Get single worklog with project + developer |
+| `POST` | `/api/worklogs` | Create worklog (`date`, `hours`, `projectId`, `developerId`, `isBillable?`, `jiraIssueId?`) |
+| `PUT` | `/api/worklogs/:id` | Update worklog fields |
 
 ### Reports
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/reports/client-hours?month=YYYY-MM` | Budget vs consumption per client |
-| `GET` | `/reports/developer-workload?month=YYYY-MM` | Billable vs non-billable per developer |
-| `GET` | `/reports/client-summary?month=YYYY-MM` | Component hours grouped by parent client |
-| `GET` | `/reports/daily?date=YYYY-MM-DD` | Developer → component → hours for a single day |
+| `GET` | `/api/reports/client-hours?month=YYYY-MM` | Budget vs consumption per client |
+| `GET` | `/api/reports/developer-workload?month=YYYY-MM` | Billable vs non-billable per developer |
+| `GET` | `/api/reports/client-summary?month=YYYY-MM` | Component hours grouped by parent client |
+| `GET` | `/api/reports/daily?date=YYYY-MM-DD` | Developer → component → hours for a single day |
 
 ### Jira Sync
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/jira-sync/trigger?since=YYYY-MM-DD` | Trigger Jira worklog sync (defaults to 1st of current month) |
+| `POST` | `/api/jira-sync/trigger?month=1-12` | Trigger Jira worklog sync (defaults to current month) |
 
 ## Google Sheets → App Mapping
 
@@ -667,3 +672,38 @@ See `docs/jira-sync.md` for the full implementation reference.
 - No `.env.test` needed — Prisma is fully mocked; tests never connect to any database.
 - `@nestjs/testing` `Test.createTestingModule` with `.overrideProvider(PrismaService).useValue(mock)` — standard NestJS testing pattern.
 - Jira sync date-matching in tests uses the exact timestamp from the mocked Jira response (`2026-01-05T09:00:00.000Z`) to avoid spurious date-change detection in the three-way split.
+
+### Phase 15 — Backend Migration to Vercel Serverless ✅
+
+**Scope**: Consolidate both frontend and backend to a single Vercel deployment. Eliminate Koyeb and the Docker-based deployment pipeline.
+
+**Delivered**:
+- **`api/[...path].ts`** (repo root): Vercel serverless catch-all handler. Imports `getApp()` from `main.ts`, wraps the Express instance with `serverless-http`, and caches the handler across warm invocations — NestJS bootstraps only on first cold request per container.
+- **`main.ts` refactored**: `getApp()` exported as an async function with module-level instance caching. `bootstrap()` retained for `npm run dev` (called only when `require.main === module`). CORS is now conditional on `CORS_ORIGIN` env var — enabled only for local dev (cross-origin between `:5173` and `:3001`), not needed in production (same-origin via Vercel).
+- **`app.setGlobalPrefix('api')`**: All NestJS routes now live under `/api/*` (e.g. `/api/health`, `/api/projects`). Matches the prefix the frontend was already sending via `API_BASE = '/api'`.
+- **Root `vercel.json`**: Configures `turbo run build` as build command, `apps/web/dist` as output directory, 1024 MB / 10s function limits, `iad1` region, and the SPA catch-all rewrite. Replaces `apps/web/vercel.json`.
+- **Vite proxy updated**: Removed the `rewrite` that was stripping `/api` from proxied requests in dev. Requests now pass through as-is (`/api/health` → `localhost:3001/api/health`).
+- **Prisma `directUrl`**: Added `directUrl = env("DIRECT_DATABASE_URL")` to the datasource block. `DATABASE_URL` uses Neon's pooled endpoint (`?pgbouncer=true`) for the application; `DIRECT_DATABASE_URL` uses the direct endpoint for Prisma migrations and Studio.
+- **Deleted**: `apps/api/Dockerfile`, `apps/api/Procfile`, `apps/web/vercel.json`.
+- **`.env.example` updated**: Documents pooled vs direct Neon URLs; removes `VITE_API_URL` (no longer needed) and production `CORS_ORIGIN` (no longer needed).
+
+**Vercel environment variables (production)**:
+
+| Variable | Value |
+|---|---|
+| `DATABASE_URL` | Neon pooled connection string (`?pgbouncer=true`) |
+| `DIRECT_DATABASE_URL` | Neon direct connection string |
+| `JIRA_BASE_URL` | Jira instance URL |
+| `JIRA_EMAIL` | Jira account email |
+| `JIRA_API_TOKEN` | Jira API token |
+
+> `API_PORT`, `CORS_ORIGIN`, and `VITE_API_URL` are local-dev-only and do not need to be set in Vercel.
+
+**Known limitation**: Jira sync (`POST /api/jira-sync/trigger`) may exceed the 10s function timeout on Vercel Hobby plan for large worklog volumes. For full syncs, trigger from local dev (`npm run dev`). The sync endpoint works for small months or as a UI confirmation — the operation itself can be run locally at any time without affecting production data.
+
+**Key decisions**:
+- `serverless-http` wraps the Express adapter instance (not the NestJS app object) — `app.getHttpAdapter().getInstance()` returns the raw Express app, which `serverless-http` can wrap directly.
+- Instance caching at module level (not inside the handler) — the handler function is re-created on every invocation; the cached instance must live outside it.
+- Global prefix `/api` rather than path rewriting in Vercel — cleaner, single source of truth at the framework level.
+- `directUrl` required for Neon + pgbouncer — pgbouncer transaction mode doesn't support the `SET` statements Prisma uses during migrations; direct connection bypasses the pooler.
+- Cold starts on Vercel (~2-4s) are faster than Koyeb free-tier sleep (~10-30s). The existing cold start banner and retry logic remain useful and unchanged.

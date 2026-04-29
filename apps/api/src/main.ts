@@ -1,14 +1,24 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+let app: INestApplication | null = null;
 
-  app.enableCors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-  });
+export async function getApp(): Promise<INestApplication> {
+  if (app) return app;
+
+  app = await NestFactory.create(AppModule);
+
+  app.setGlobalPrefix('api');
+
+  // CORS only needed for local dev (cross-origin between :5173 and :3001)
+  const corsOrigin = process.env.CORS_ORIGIN;
+  if (corsOrigin) {
+    app.enableCors({
+      origin: corsOrigin,
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    });
+  }
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -18,8 +28,18 @@ async function bootstrap() {
     }),
   );
 
+  await app.init();
+  return app;
+}
+
+async function bootstrap() {
+  const nestApp = await getApp();
   const port = process.env.API_PORT || 3001;
-  await app.listen(port);
+  await nestApp.listen(port);
   console.log(`API running on http://localhost:${port}`);
 }
-bootstrap();
+
+// Only auto-start when run directly (local dev / node dist/main.js)
+if (require.main === module) {
+  bootstrap();
+}
