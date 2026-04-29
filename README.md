@@ -32,13 +32,48 @@ mgs-clients/
 │   └── web/                        # React frontend
 │       ├── vercel.json             # SPA rewrites for Vercel
 │       └── src/
-│           ├── components/
-│           │   ├── ui/             # StatCard, ClientTable, Skeleton, ColdStartBanner, Modal, Toast
-│           │   ├── charts/         # ClientHoursChart (react-chartjs-2)
-│           │   ├── manage/         # DeveloperPanel, ProjectPanel, DeveloperForm, ProjectForm
-│           │   └── layout/         # AppShell, NavTabs, MonthPicker
-│           ├── pages/              # Dashboard, DeveloperReport, Manage
-│           ├── hooks/              # useApi, useMonth, useConnectionStatus
+           ├── components/         # Atomic Design hierarchy
+           │   ├── atoms/          # Primitives (HTML + Tailwind only)
+           │   │   ├── Alert/      # Inline / section / page error variants
+           │   │   ├── Badge/      # Span wrapper with className passthrough
+           │   │   ├── Button/     # 5 variants: primary, secondary, danger, link-blue, link-red
+           │   │   ├── Header/     # Page title + subtitle + badge
+           │   │   ├── Input/      # Styled text input
+           │   │   ├── Label/      # Form label with optional required asterisk
+           │   │   ├── LegendItem/ # Color dot + label for charts
+           │   │   ├── Modal/      # Overlay dialog (uses Button atom)
+           │   │   ├── Skeleton/   # Loading placeholder shapes
+           │   │   ├── Spinner/    # SVG animate-spin loader
+           │   │   ├── StatCard/   # Metric tile with label/value/unit
+           │   │   └── TableHeader/# <th> wrapper with className passthrough
+           │   ├── molecules/      # Atoms composed together
+           │   │   ├── ColdStartBanner/ # Waking-server banner (Spinner + text)
+           │   │   ├── ConfirmDialog/   # Modal + Cancel/Confirm buttons
+           │   │   ├── DeveloperForm/   # Create/edit developer (Input, Label, Button, Alert)
+           │   │   ├── MonthPicker/     # Month nav arrows (Button + Badge)
+           │   │   ├── ProjectForm/     # Create/edit project (same atom set)
+           │   │   └── Toast/           # Auto-dismiss notification
+           │   ├── organisms/      # Feature blocks (molecules + atoms)
+           │   │   ├── ClientHoursChart/      # Bar chart with LegendItem atoms
+           │   │   ├── ClientTable/           # Budget vs hours table
+           │   │   ├── ComponentPanel/        # Component CRUD table
+           │   │   ├── DetailsPanel/          # Custom report drill-down
+           │   │   ├── DeveloperPanel/        # Developer CRUD table
+           │   │   ├── DeveloperTable/        # Developer hours table
+           │   │   ├── DeveloperWorkloadChart/# Horizontal stacked bar chart
+           │   │   ├── DownloadMenu/          # Export dropdown (HTML + XLSX)
+           │   │   ├── FilterForm/            # Custom report filter controls
+           │   │   ├── ProjectPanel/          # Project CRUD table
+           │   │   ├── ReportChart/           # Custom report bar chart
+           │   │   └── TrashPanel/            # Soft-delete restore table
+           │   ├── templates/      # Page layout wrappers
+           │   │   └── AppShell/   # Nav bar + page container (Button, Spinner)
+           │   └── pages/          # Route-level components
+           │       ├── CustomReports/ # Custom report builder
+           │       ├── Dashboard/     # Project hours overview
+           │       ├── DeveloperReport/ # Developer workload overview
+           │       └── Manage/        # CRUD management UI
+           ├── hooks/              # useApi, useMonth, useConnectionStatus, useTheme
 │           └── services/           # API client (retry + cold start detection)
 │
 ├── packages/
@@ -374,3 +409,71 @@ Fonts: **DM Sans** (body), **Space Mono** (numbers, labels, badges).
 - `data-theme` attribute on `<html>` (not body or a wrapper div) — ensures any CSS anywhere in the tree can use the selector, including third-party styles.
 - `localStorage` key `'app-theme'` — explicit user preference overrides OS `prefers-color-scheme` (user control > OS default).
 - Accent colors stay identical in both themes — blue/green/red/purple already meet WCAG AA on both `#0d1117` and `#f0f2f5` backgrounds.
+
+### Phase 7 — Atomic Design Refactor ✅
+
+**Scope**: Restructure the entire `apps/web/src/components/` tree to enforce Atomic Design composition hierarchy with zero visual or functional changes.
+
+#### Phase 7A — File Reorganization
+
+All 26 component files moved from flat `ui/`, `charts/`, `manage/`, `layout/` folders into proper Atomic Design tiers:
+
+| Tier | Path | Rule |
+|------|------|------|
+| Atoms | `components/atoms/` | HTML + Tailwind only — no custom component imports |
+| Molecules | `components/molecules/` | Import atoms only |
+| Organisms | `components/organisms/` | Import molecules and/or atoms |
+| Templates | `components/templates/` | Import organisms, molecules, atoms |
+| Pages | `components/pages/` | Import templates, organisms, molecules, atoms |
+
+Import direction is strictly one-way: **Atoms ← Molecules ← Organisms ← Templates ← Pages**. No tier may import from a tier above it.
+
+#### Phase 7B — Composition Hierarchy Enforcement
+
+Extracted 8 new atom primitives shared across 3+ components, and 1 new molecule:
+
+**New Atoms**
+
+| Atom | Props | Used by |
+|------|-------|---------|
+| `Button` | `variant?: 'primary' \| 'secondary' \| 'danger' \| 'link-blue' \| 'link-red'`, `className?` | Modal, MonthPicker, all panels, AppShell, all pages |
+| `Input` | `className?` (overrides default style) | DeveloperForm, ProjectForm, ComponentPanel |
+| `Label` | `required?: boolean`, `className?` | DeveloperForm, ProjectForm, ComponentPanel, FilterForm |
+| `Badge` | `className?`, `style?` | MonthPicker, ComponentPanel, TrashPanel, CustomReports |
+| `Spinner` | `className?` | ColdStartBanner, AppShell |
+| `TableHeader` | `className?` | ClientTable, DeveloperTable, DeveloperPanel, ProjectPanel, ComponentPanel, TrashPanel |
+| `LegendItem` | `color: string`, `label: string`, `className?` | ClientHoursChart, DeveloperWorkloadChart, ReportChart |
+| `Alert` | `variant: 'inline' \| 'section' \| 'page'` | All forms, all panels, all pages |
+
+**New Molecule**
+
+| Molecule | Atoms used | Used by |
+|----------|------------|---------|
+| `ConfirmDialog` | `Modal` + `Button` | DeveloperPanel, ProjectPanel, ComponentPanel |
+
+**Button atom variants**
+
+| Variant | Visual | Use case |
+|---------|--------|---------|
+| `primary` | Blue filled, `hover:opacity-90` | Submit, Add actions |
+| `secondary` | Border only | Cancel, neutral actions |
+| `danger` | Red filled | Destructive confirm |
+| `link-blue` | Text-only blue | Inline Edit links |
+| `link-red` | Text-only red | Inline Delete links |
+
+Both `variant` and `className` can be combined — variant sets the base style, `className` appends additional classes (e.g. `variant="link-blue" className="mr-2"`).
+
+**Alert atom variants**
+
+| Variant | Visual | Use case |
+|---------|--------|---------|
+| `inline` | Small red border box (`text-xs`) | Form validation errors |
+| `section` | Padded red box (`text-xs`, `py-6`) | Panel/widget error state |
+| `page` | Full-width red box (`text-sm`, `p-6`) | Page-level data load failure |
+
+**Key decisions**:
+- `Button` variant does not prevent `className` — both are combined via `filter(Boolean).join(' ')`. This handles the common case of needing a variant style plus a layout modifier (e.g. `mr-2`).
+- `TableHeader` and `Badge` are intentionally thin wrappers — they enforce correct semantic elements (`<th>`, `<span>`) while allowing full style customization via `className`.
+- Local `Th` helper functions inside organisms are kept but rewritten to wrap `<TableHeader>` — this avoids changing every call site while still routing through the atom.
+- `ConfirmDialog` replaces the inline `<Modal>` + two `<button>` block that was copy-pasted in DeveloperPanel, ProjectPanel, and ComponentPanel.
+- Zero visual changes — all existing `className` strings were preserved exactly when converting raw elements to atoms.
