@@ -137,17 +137,10 @@ export function ComponentPanel({ components, projects, onRefresh }: ComponentPan
                   </Badge>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <Button
-                    variant="link-blue"
-                    className="mr-2"
-                    onClick={() => openEdit(comp)}
-                  >
+                  <Button variant="link-blue" className="mr-2" onClick={() => openEdit(comp)}>
                     Edit
                   </Button>
-                  <Button
-                    variant="link-red"
-                    onClick={() => setDeleting(comp)}
-                  >
+                  <Button variant="link-red" onClick={() => setDeleting(comp)}>
                     Delete
                   </Button>
                 </td>
@@ -171,11 +164,7 @@ export function ComponentPanel({ components, projects, onRefresh }: ComponentPan
         title={editing ? 'Edit Component' : 'Add Component'}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
-          {formError && (
-            <Alert variant="inline">
-              {formError}
-            </Alert>
-          )}
+          {formError && <Alert variant="inline">{formError}</Alert>}
           {!editing && (
             <label className="block">
               <Label required>Project</Label>
@@ -196,11 +185,7 @@ export function ComponentPanel({ components, projects, onRefresh }: ComponentPan
           )}
           <label className="block">
             <Label required>Name</Label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
+            <Input value={name} onChange={(e) => setName(e.target.value)} required />
           </label>
           <label className="flex items-center gap-2">
             <input
@@ -212,18 +197,10 @@ export function ComponentPanel({ components, projects, onRefresh }: ComponentPan
             <span className="text-xs text-mgs-text-muted">Billable</span>
           </label>
           <div className="flex justify-end gap-2 pt-2">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setModalOpen(false)}
-            >
+            <Button type="button" variant="secondary" onClick={() => setModalOpen(false)}>
               Cancel
             </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={formLoading}
-            >
+            <Button type="submit" variant="primary" disabled={formLoading}>
               {formLoading ? 'Saving...' : editing ? 'Update' : 'Create'}
             </Button>
           </div>
@@ -236,7 +213,12 @@ export function ComponentPanel({ components, projects, onRefresh }: ComponentPan
         onClose={() => setDeleting(null)}
         onConfirm={handleDelete}
         title="Delete Component"
-        message={<>Are you sure you want to delete <strong className="text-mgs-text">{deleting?.name}</strong>?</>}
+        message={
+          <>
+            Are you sure you want to delete{' '}
+            <strong className="text-mgs-text">{deleting?.name}</strong>?
+          </>
+        }
         loading={deleteLoading}
       />
     </div>

@@ -1,10 +1,4 @@
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Tooltip,
-} from 'chart.js';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Tooltip } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
 import type { ClientHoursDto } from '@mgs/shared';
 import { LegendItem } from '../../atoms/LegendItem/LegendItem';
@@ -79,9 +73,7 @@ export function ClientHoursChart({ clients }: ClientHoursChartProps) {
                   {
                     label: 'Remaining / Overage',
                     data: billable.map((c) => Math.abs(c.remaining)),
-                    backgroundColor: billable.map((c) =>
-                      c.remaining < 0 ? '#ef4444' : '#8b5cf6',
-                    ),
+                    backgroundColor: billable.map((c) => (c.remaining < 0 ? '#ef4444' : '#8b5cf6')),
                     borderRadius: 4,
                     barThickness: 48,
                   },
@@ -135,5 +127,3 @@ export function ClientHoursChart({ clients }: ClientHoursChartProps) {
     </div>
   );
 }
-
-

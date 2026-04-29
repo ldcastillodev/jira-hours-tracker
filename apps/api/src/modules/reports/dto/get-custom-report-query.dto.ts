@@ -16,7 +16,12 @@ export class GetCustomReportQueryDto {
 
   @IsOptional()
   @Transform(({ value }) =>
-    value ? value.split(',').map((e: string) => e.trim()).filter(Boolean) : undefined,
+    value
+      ? value
+          .split(',')
+          .map((e: string) => e.trim())
+          .filter(Boolean)
+      : undefined
   )
   @IsArray()
   @IsEmail({}, { each: true })

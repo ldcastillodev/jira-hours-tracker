@@ -55,9 +55,7 @@ function Th({
 
 function DeveloperRow({ developer }: { developer: DeveloperWorkloadDto }) {
   const billablePct =
-    developer.totalHours > 0
-      ? (developer.billableHours / developer.totalHours) * 100
-      : 0;
+    developer.totalHours > 0 ? (developer.billableHours / developer.totalHours) * 100 : 0;
 
   let pctColor = '#10b981';
   if (billablePct < 50) pctColor = '#ef4444';
@@ -88,10 +86,7 @@ function DeveloperRow({ developer }: { developer: DeveloperWorkloadDto }) {
               }}
             />
           </div>
-          <span
-            className="min-w-[42px] font-mono text-[11px]"
-            style={{ color: pctColor }}
-          >
+          <span className="min-w-[42px] font-mono text-[11px]" style={{ color: pctColor }}>
             {billablePct.toFixed(1)}%
           </span>
         </div>

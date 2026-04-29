@@ -27,7 +27,7 @@ describe('JiraSyncController', () => {
     if (futureMonth > 12) return; // skip if we're in December (edge case)
 
     await expect(controller.triggerSync({ month: futureMonth } as any)).rejects.toThrow(
-      BadRequestException,
+      BadRequestException
     );
   });
 
@@ -47,7 +47,7 @@ describe('JiraSyncController', () => {
       skippedCount: 0,
     });
 
-    const result = await controller.triggerSync({} as any) as any;
+    const result = (await controller.triggerSync({} as any)) as any;
 
     expect(result.success).toBe(true);
     expect(result.worklogsCreated).toBe(10);
@@ -67,7 +67,7 @@ describe('JiraSyncController', () => {
       skippedCount: 0,
     });
 
-    const result = await controller.triggerSync({} as any) as any;
+    const result = (await controller.triggerSync({} as any)) as any;
 
     expect(result.message).not.toContain('removed');
   });

@@ -54,9 +54,7 @@ export class DevelopersService {
       where: { email: dev.email, deletedAt: null, id: { not: id } },
     });
     if (emailConflict)
-      throw new ConflictException(
-        `A developer with email "${dev.email}" already exists.`,
-      );
+      throw new ConflictException(`A developer with email "${dev.email}" already exists.`);
     return this.prisma.developer.update({ where: { id }, data: { deletedAt: null } });
   }
 }

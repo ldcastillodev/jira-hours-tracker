@@ -38,18 +38,12 @@ export function Manage() {
   const projs = useApi<Project[]>('/projects');
 
   const allComponents = projs.data
-    ? projs.data.flatMap((p) =>
-        (p.components ?? []).map((c) => ({ ...c, projectId: p.id })),
-      )
+    ? projs.data.flatMap((p) => (p.components ?? []).map((c) => ({ ...c, projectId: p.id })))
     : [];
 
   return (
     <>
-      <Header
-        title="Manage"
-        subtitle="Manage developers, projects and components"
-        badge="Manage"
-      />
+      <Header title="Manage" subtitle="Manage developers, projects and components" badge="Manage" />
 
       {/* Tabs */}
       <div className="mb-6 flex gap-1 border-b border-mgs-border">
@@ -115,10 +109,5 @@ export function Manage() {
 }
 
 function ErrorBlock({ message }: { message: string }) {
-  return (
-    <Alert variant="section">
-      {message}
-    </Alert>
-  );
+  return <Alert variant="section">{message}</Alert>;
 }
-

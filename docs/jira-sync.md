@@ -42,15 +42,15 @@ syncWorklogs(startDate, endDate)
 
 ### Query count comparison
 
-| Scenario | Original (pre-batch) | After batch (Phase 9) | After change detection (Phase 12) |
-|----------|---------------------|----------------------|-----------------------------------|
-| Setup | 2 | 2 | 2 |
-| DB preload | 0 | 0 | 1 |
-| Per-chunk existence check | 0 | N/200 | 0 |
-| Writes | ~N | changed/200 txns | changed/200 txns |
-| Skip unchanged | No | No | Yes — 0 writes |
-| Orphan detection | No | No | Yes — 1 `updateMany` |
-| **500 worklogs, 80% unchanged** | ~1,500 queries | ~12 queries | ~5 queries |
+| Scenario                        | Original (pre-batch) | After batch (Phase 9) | After change detection (Phase 12) |
+| ------------------------------- | -------------------- | --------------------- | --------------------------------- |
+| Setup                           | 2                    | 2                     | 2                                 |
+| DB preload                      | 0                    | 0                     | 1                                 |
+| Per-chunk existence check       | 0                    | N/200                 | 0                                 |
+| Writes                          | ~N                   | changed/200 txns      | changed/200 txns                  |
+| Skip unchanged                  | No                   | No                    | Yes — 0 writes                    |
+| Orphan detection                | No                   | No                    | Yes — 1 `updateMany`              |
+| **500 worklogs, 80% unchanged** | ~1,500 queries       | ~12 queries           | ~5 queries                        |
 
 ### Lookup tables (Step 1)
 
@@ -92,7 +92,7 @@ Only **mutable fields** are compared — `hours`, `date`, and `ticketKey`. `assi
 
 ```typescript
 const hoursChanged = Math.abs(Number(existing.hours) - record.hours) > 0.0001;
-const dateChanged  = (existing.date as Date).getTime() !== record.date.getTime();
+const dateChanged = (existing.date as Date).getTime() !== record.date.getTime();
 const ticketChanged = existing.ticketKey !== record.ticketKey;
 if (hoursChanged || dateChanged || ticketChanged) toUpdate.push(record);
 // else: skip — no write
@@ -152,6 +152,7 @@ The "Sync Jira" button in the nav bar opens a dropdown listing all 12 months of 
 - On completion the toast message comes directly from the API response (e.g. `"Synced 45 worklogs from February 2026"`)
 
 Validation is enforced at both layers:
+
 - **Frontend**: future month buttons have `pointer-events-none`
 - **Backend**: `BadRequestException` if `month > currentMonth`
 
@@ -166,6 +167,7 @@ POST /jira-sync/trigger?month=2
 - Validation throws `400 Bad Request` for invalid or future months.
 
 Date range for the selected month:
+
 ```
 startDate = YYYY-MM-01
 endDate   = YYYY-MM-{last day of month}
@@ -189,27 +191,27 @@ export function useDataRefresh(callback: () => void) {
 }
 ```
 
-| Location | Behavior |
-|----------|----------|
-| `AppShell` (`SyncButton`) | calls `emitDataRefresh()` after a successful sync |
-| `Dashboard` | calls `useDataRefresh(refetch)` — chart + stat cards reload |
-| `DeveloperReport` | calls `useDataRefresh(refetch)` — chart + table reload |
-| `CustomReports` | shows an amber "Jira data was synced — re-generate for updated results" banner (dismissible); does not auto-refresh to avoid resetting active filter state |
+| Location                  | Behavior                                                                                                                                                   |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AppShell` (`SyncButton`) | calls `emitDataRefresh()` after a successful sync                                                                                                          |
+| `Dashboard`               | calls `useDataRefresh(refetch)` — chart + stat cards reload                                                                                                |
+| `DeveloperReport`         | calls `useDataRefresh(refetch)` — chart + table reload                                                                                                     |
+| `CustomReports`           | shows an amber "Jira data was synced — re-generate for updated results" banner (dismissible); does not auto-refresh to avoid resetting active filter state |
 
 ## Files Changed
 
-| File | Change |
-|------|--------|
-| `packages/db/prisma/schema.prisma` | Added `deletedAt DateTime?` + `@@index([date])` to `Worklog` |
-| `packages/db/prisma/migrations/20260429130226_add_worklog_soft_delete/` | New migration |
-| `apps/api/src/modules/jira-sync/jira-sync.service.ts` | Replaced `batchUpsertChunk()` with Steps 5–7 (preload, 3-way split, separate create/update/soft-delete writes) |
-| `apps/api/src/modules/jira-sync/jira-sync.controller.ts` | Added `worklogsDeleted`, `worklogsUnchanged` to response; updated message format |
-| `apps/api/src/modules/reports/reports.service.ts` | Added `deletedAt: null` to all 4 worklog `findMany` calls |
-| `apps/api/src/modules/worklogs/worklogs.service.ts` | Added `deletedAt: null` to `findAll` query |
-| `apps/web/src/hooks/useApi.ts` | Added `emitDataRefresh()` and `useDataRefresh()` exports |
-| `apps/web/src/components/templates/AppShell/AppShell.tsx` | `SyncButton` replaced with month-selector dropdown; calls `emitDataRefresh()` after sync |
-| `apps/web/src/components/pages/Dashboard/Dashboard.tsx` | Added `useDataRefresh(refetch)` |
-| `apps/web/src/components/pages/DeveloperReport/DeveloperReport.tsx` | Added `useDataRefresh(refetch)` |
-| `apps/web/src/components/pages/CustomReports/CustomReports.tsx` | Added stale hint banner + `useDataRefresh` |
+| File                                                                    | Change                                                                                                         |
+| ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `packages/db/prisma/schema.prisma`                                      | Added `deletedAt DateTime?` + `@@index([date])` to `Worklog`                                                   |
+| `packages/db/prisma/migrations/20260429130226_add_worklog_soft_delete/` | New migration                                                                                                  |
+| `apps/api/src/modules/jira-sync/jira-sync.service.ts`                   | Replaced `batchUpsertChunk()` with Steps 5–7 (preload, 3-way split, separate create/update/soft-delete writes) |
+| `apps/api/src/modules/jira-sync/jira-sync.controller.ts`                | Added `worklogsDeleted`, `worklogsUnchanged` to response; updated message format                               |
+| `apps/api/src/modules/reports/reports.service.ts`                       | Added `deletedAt: null` to all 4 worklog `findMany` calls                                                      |
+| `apps/api/src/modules/worklogs/worklogs.service.ts`                     | Added `deletedAt: null` to `findAll` query                                                                     |
+| `apps/web/src/hooks/useApi.ts`                                          | Added `emitDataRefresh()` and `useDataRefresh()` exports                                                       |
+| `apps/web/src/components/templates/AppShell/AppShell.tsx`               | `SyncButton` replaced with month-selector dropdown; calls `emitDataRefresh()` after sync                       |
+| `apps/web/src/components/pages/Dashboard/Dashboard.tsx`                 | Added `useDataRefresh(refetch)`                                                                                |
+| `apps/web/src/components/pages/DeveloperReport/DeveloperReport.tsx`     | Added `useDataRefresh(refetch)`                                                                                |
+| `apps/web/src/components/pages/CustomReports/CustomReports.tsx`         | Added stale hint banner + `useDataRefresh`                                                                     |
 
 No new npm dependencies.

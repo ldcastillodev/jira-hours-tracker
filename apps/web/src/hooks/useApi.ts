@@ -24,7 +24,7 @@ export function useDataRefresh(callback: () => void) {
     }
     window.addEventListener(DATA_REFRESH_EVENT, handler);
     return () => window.removeEventListener(DATA_REFRESH_EVENT, handler);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 }
 
 // ── useApi ───────────────────────────────────────────────────────────────────

@@ -16,13 +16,11 @@ export function StatCard({ label, value, unit, sub, color, alert, alertColor }: 
       </div>
       <div className="font-mono text-[26px] font-bold leading-none" style={{ color }}>
         {value}
-        {unit && (
-          <span className="text-[14px] text-mgs-text-faint">{unit}</span>
-        )}
+        {unit && <span className="text-[14px] text-mgs-text-faint">{unit}</span>}
       </div>
       <div className="mt-1 text-[11px] text-mgs-text-dim">{sub}</div>
-      {alert && (
-        alertColor ? (
+      {alert &&
+        (alertColor ? (
           <div
             className="mt-2 inline-flex items-center gap-1 rounded-[20px] px-2 py-[3px] text-[10px] font-bold uppercase tracking-wider"
             style={{
@@ -37,8 +35,7 @@ export function StatCard({ label, value, unit, sub, color, alert, alertColor }: 
           <div className="mt-2 inline-flex items-center gap-1 rounded-[20px] border border-mgs-red/30 bg-mgs-red/10 px-2 py-[3px] text-[10px] font-bold uppercase tracking-wider text-mgs-red-light">
             ⚠ {alert}
           </div>
-        )
-      )}
+        ))}
     </div>
   );
 }

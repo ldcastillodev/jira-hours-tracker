@@ -12,10 +12,7 @@ describe('DevelopersService', () => {
   beforeEach(async () => {
     prisma = createMockPrismaService();
     const module = await Test.createTestingModule({
-      providers: [
-        DevelopersService,
-        { provide: PrismaService, useValue: prisma },
-      ],
+      providers: [DevelopersService, { provide: PrismaService, useValue: prisma }],
     }).compile();
     service = module.get(DevelopersService);
   });
@@ -26,7 +23,7 @@ describe('DevelopersService', () => {
       const result = await service.findAll();
       expect(result).toBe(DUMMY_DEVELOPERS);
       expect(prisma.developer.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { deletedAt: null } }),
+        expect.objectContaining({ where: { deletedAt: null } })
       );
     });
   });
@@ -76,7 +73,7 @@ describe('DevelopersService', () => {
       const result = await service.delete(1);
       expect(result).toEqual({ deleted: true });
       expect(prisma.developer.update).toHaveBeenCalledWith(
-        expect.objectContaining({ data: expect.objectContaining({ deletedAt: expect.any(Date) }) }),
+        expect.objectContaining({ data: expect.objectContaining({ deletedAt: expect.any(Date) }) })
       );
     });
 
@@ -90,9 +87,7 @@ describe('DevelopersService', () => {
     const inactive = { ...DUMMY_DEVELOPERS[0], deletedAt: new Date('2026-01-01') };
 
     it('activates developer when no email conflict', async () => {
-      prisma.developer.findFirst
-        .mockResolvedValueOnce(inactive)
-        .mockResolvedValueOnce(null);
+      prisma.developer.findFirst.mockResolvedValueOnce(inactive).mockResolvedValueOnce(null);
       prisma.developer.update.mockResolvedValue({ ...inactive, deletedAt: null });
       const result = await service.activateDeveloper(1);
       expect((result as any).deletedAt).toBeNull();

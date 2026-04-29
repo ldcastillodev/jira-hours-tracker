@@ -8,9 +8,7 @@ export function useMonth() {
 
   const [y, m] = month.split('-').map(Number);
   const date = new Date(y, m - 1, 1);
-  const label = date
-    .toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-    .toUpperCase();
+  const label = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toUpperCase();
   const dateStr = now.toLocaleDateString('en-US', {
     day: 'numeric',
     month: 'long',

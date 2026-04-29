@@ -17,10 +17,7 @@ describe('ProjectsService', () => {
   beforeEach(async () => {
     prisma = createMockPrismaService();
     const module = await Test.createTestingModule({
-      providers: [
-        ProjectsService,
-        { provide: PrismaService, useValue: prisma },
-      ],
+      providers: [ProjectsService, { provide: PrismaService, useValue: prisma }],
     }).compile();
     service = module.get(ProjectsService);
   });
@@ -77,7 +74,7 @@ describe('ProjectsService', () => {
       const result = await service.delete(1);
       expect(result).toEqual({ deleted: true });
       expect(prisma.component.updateMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: expect.objectContaining({ projectId: 1 }) }),
+        expect.objectContaining({ where: expect.objectContaining({ projectId: 1 }) })
       );
     });
   });
@@ -86,9 +83,7 @@ describe('ProjectsService', () => {
     const inactive = { ...DUMMY_PROJECTS[0], deletedAt: new Date('2026-01-01') };
 
     it('activates project when no name conflict', async () => {
-      prisma.project.findFirst
-        .mockResolvedValueOnce(inactive)
-        .mockResolvedValueOnce(null);
+      prisma.project.findFirst.mockResolvedValueOnce(inactive).mockResolvedValueOnce(null);
       prisma.project.update.mockResolvedValue({ ...inactive, deletedAt: null });
       await expect(service.activateProject(1)).resolves.toBeDefined();
     });
@@ -108,12 +103,14 @@ describe('ProjectsService', () => {
 
   describe('activateProjectCascade', () => {
     const inactiveComp = { ...DUMMY_COMPONENTS[0], deletedAt: new Date('2026-01-01') };
-    const inactiveProject = { ...DUMMY_PROJECTS[0], deletedAt: new Date('2026-01-01'), components: [inactiveComp] };
+    const inactiveProject = {
+      ...DUMMY_PROJECTS[0],
+      deletedAt: new Date('2026-01-01'),
+      components: [inactiveComp],
+    };
 
     it('activates project and its inactive components', async () => {
-      prisma.project.findFirst
-        .mockResolvedValueOnce(inactiveProject)
-        .mockResolvedValueOnce(null); // no project name conflict
+      prisma.project.findFirst.mockResolvedValueOnce(inactiveProject).mockResolvedValueOnce(null); // no project name conflict
       prisma.component.findFirst.mockResolvedValue(null); // no component name conflict
       prisma.project.update.mockResolvedValue({ ...inactiveProject, deletedAt: null });
       prisma.component.updateMany.mockResolvedValue({ count: 1 });
@@ -122,9 +119,7 @@ describe('ProjectsService', () => {
     });
 
     it('throws ConflictException when a component name already exists', async () => {
-      prisma.project.findFirst
-        .mockResolvedValueOnce(inactiveProject)
-        .mockResolvedValueOnce(null);
+      prisma.project.findFirst.mockResolvedValueOnce(inactiveProject).mockResolvedValueOnce(null);
       prisma.component.findFirst.mockResolvedValue(DUMMY_COMPONENTS[1]); // conflict
       await expect(service.activateProjectCascade(1)).rejects.toThrow(ConflictException);
     });
@@ -136,14 +131,17 @@ describe('ProjectsService', () => {
         .mockResolvedValueOnce(null) // no existing for project
         .mockResolvedValueOnce(null); // no name conflict
       prisma.component.create.mockResolvedValue(DUMMY_COMPONENTS[0]);
-      const result = await service.createComponent(1, { name: 'Test Component Alpha', isBillable: true });
+      const result = await service.createComponent(1, {
+        name: 'Test Component Alpha',
+        isBillable: true,
+      });
       expect(result).toBe(DUMMY_COMPONENTS[0]);
     });
 
     it('throws ConflictException when project already has an active component', async () => {
       prisma.component.findFirst.mockResolvedValue(DUMMY_COMPONENTS[0]);
       await expect(
-        service.createComponent(1, { name: 'Another', isBillable: true }),
+        service.createComponent(1, { name: 'Another', isBillable: true })
       ).rejects.toThrow(ConflictException);
     });
 
@@ -152,7 +150,7 @@ describe('ProjectsService', () => {
         .mockResolvedValueOnce(null) // no existing for project
         .mockResolvedValueOnce(DUMMY_COMPONENTS[1]); // name conflict
       await expect(
-        service.createComponent(1, { name: 'Test Component Beta', isBillable: true }),
+        service.createComponent(1, { name: 'Test Component Beta', isBillable: true })
       ).rejects.toThrow(ConflictException);
     });
   });
@@ -193,9 +191,7 @@ describe('ProjectsService', () => {
     const inactive = { ...DUMMY_COMPONENTS[0], deletedAt: new Date('2026-01-01') };
 
     it('activates component when no name conflict', async () => {
-      prisma.component.findFirst
-        .mockResolvedValueOnce(inactive)
-        .mockResolvedValueOnce(null);
+      prisma.component.findFirst.mockResolvedValueOnce(inactive).mockResolvedValueOnce(null);
       prisma.component.update.mockResolvedValue({ ...inactive, deletedAt: null });
       await expect(service.activateComponent(1)).resolves.toBeDefined();
     });

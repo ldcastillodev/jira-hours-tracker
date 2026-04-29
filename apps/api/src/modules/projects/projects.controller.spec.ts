@@ -43,7 +43,10 @@ describe('ProjectsController', () => {
   });
 
   it('activateProject calls activateProjectCascade when cascade=true', async () => {
-    mockService.activateProjectCascade.mockResolvedValue({ projectActivated: true, componentsActivated: 1 });
+    mockService.activateProjectCascade.mockResolvedValue({
+      projectActivated: true,
+      componentsActivated: 1,
+    });
     await controller.activateProject('1', { cascade: true } as any);
     expect(mockService.activateProjectCascade).toHaveBeenCalledWith(1);
     expect(mockService.activateProject).not.toHaveBeenCalled();

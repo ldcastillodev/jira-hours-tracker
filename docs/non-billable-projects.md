@@ -30,22 +30,22 @@ Un proyecto es no facturable si `project.components[0]?.isBillable === false`. D
 
 ### Cálculo de horas (`GET /reports/client-hours`)
 
-| Campo | Proyecto facturable | Proyecto no facturable |
-|---|---|---|
-| `isBillable` | `true` | `false` |
-| `contracted` | `monthlyBudget ?? 0` | `0` |
-| `used` | suma real de worklogs | suma real de worklogs |
-| `remaining` | `contracted - used` | `0` |
-| `percentUsed` | `(used / contracted) * 100` | `0` |
+| Campo         | Proyecto facturable         | Proyecto no facturable |
+| ------------- | --------------------------- | ---------------------- |
+| `isBillable`  | `true`                      | `false`                |
+| `contracted`  | `monthlyBudget ?? 0`        | `0`                    |
+| `used`        | suma real de worklogs       | suma real de worklogs  |
+| `remaining`   | `contracted - used`         | `0`                    |
+| `percentUsed` | `(used / contracted) * 100` | `0`                    |
 
 ### Totales del resumen (`ClientHoursSummaryDto`)
 
-| Campo | Incluye no facturables |
-|---|---|
-| `totalContracted` | No |
-| `totalUsed` | Sí |
-| `totalRemaining` | No |
-| `overBudgetCount` | No |
+| Campo             | Incluye no facturables |
+| ----------------- | ---------------------- |
+| `totalContracted` | No                     |
+| `totalUsed`       | Sí                     |
+| `totalRemaining`  | No                     |
+| `overBudgetCount` | No                     |
 
 ---
 
@@ -108,17 +108,17 @@ La columna Budget muestra `—` cuando `monthlyBudget` es `null`.
 
 ## Archivos modificados
 
-| Archivo | Qué cambió |
-|---|---|
-| `packages/db/prisma/schema.prisma` | `monthlyBudget Float` → `Float?` |
-| `packages/db/prisma/migrations/20260428162622_nullable_monthly_budget/` | Migración generada |
-| `packages/shared/src/dto/client-hours.dto.ts` | Añadido `isBillable: boolean` |
-| `apps/api/src/modules/reports/reports.service.ts` | Lógica no facturable en `getClientHours()` |
-| `apps/api/src/modules/projects/projects.service.ts` | `monthlyBudget` acepta `null` en create/update |
-| `apps/web/src/pages/Dashboard.tsx` | Guard de división por cero en stat card |
-| `apps/web/src/components/ui/ClientTable.tsx` | Split en dos secciones por billability |
-| `apps/web/src/components/charts/ClientHoursChart.tsx` | Split en dos gráficos por billability |
-| `apps/web/src/components/manage/TrashPanel.tsx` | `monthlyBudget` nullable, muestra `—` |
-| `apps/web/src/components/manage/ProjectPanel.tsx` | `monthlyBudget: number \| null` |
-| `apps/web/src/components/manage/ProjectForm.tsx` | `monthlyBudget: number \| null` |
-| `apps/web/src/pages/Manage.tsx` | `monthlyBudget: number \| null` |
+| Archivo                                                                 | Qué cambió                                     |
+| ----------------------------------------------------------------------- | ---------------------------------------------- |
+| `packages/db/prisma/schema.prisma`                                      | `monthlyBudget Float` → `Float?`               |
+| `packages/db/prisma/migrations/20260428162622_nullable_monthly_budget/` | Migración generada                             |
+| `packages/shared/src/dto/client-hours.dto.ts`                           | Añadido `isBillable: boolean`                  |
+| `apps/api/src/modules/reports/reports.service.ts`                       | Lógica no facturable en `getClientHours()`     |
+| `apps/api/src/modules/projects/projects.service.ts`                     | `monthlyBudget` acepta `null` en create/update |
+| `apps/web/src/pages/Dashboard.tsx`                                      | Guard de división por cero en stat card        |
+| `apps/web/src/components/ui/ClientTable.tsx`                            | Split en dos secciones por billability         |
+| `apps/web/src/components/charts/ClientHoursChart.tsx`                   | Split en dos gráficos por billability          |
+| `apps/web/src/components/manage/TrashPanel.tsx`                         | `monthlyBudget` nullable, muestra `—`          |
+| `apps/web/src/components/manage/ProjectPanel.tsx`                       | `monthlyBudget: number \| null`                |
+| `apps/web/src/components/manage/ProjectForm.tsx`                        | `monthlyBudget: number \| null`                |
+| `apps/web/src/pages/Manage.tsx`                                         | `monthlyBudget: number \| null`                |

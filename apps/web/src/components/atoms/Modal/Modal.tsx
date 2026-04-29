@@ -32,9 +32,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
     >
       <div className="w-full max-w-md rounded-xl border border-mgs-border bg-mgs-card p-6 shadow-2xl">
         <div className="mb-5 flex items-center justify-between">
-          <h2 className="font-mono text-sm font-bold tracking-tight text-mgs-text">
-            {title}
-          </h2>
+          <h2 className="font-mono text-sm font-bold tracking-tight text-mgs-text">{title}</h2>
           <Button
             onClick={onClose}
             className="text-mgs-text-dim transition-colors hover:text-mgs-text"

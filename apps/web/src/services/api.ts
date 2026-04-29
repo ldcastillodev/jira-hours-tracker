@@ -76,7 +76,7 @@ export async function checkHealth(): Promise<boolean> {
 export async function mutateApi<T = unknown>(
   path: string,
   method: 'POST' | 'PATCH' | 'PUT' | 'DELETE',
-  body?: unknown,
+  body?: unknown
 ): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     method,

@@ -14,10 +14,7 @@ describe('WorklogsService', () => {
   beforeEach(async () => {
     prisma = createMockPrismaService();
     const module = await Test.createTestingModule({
-      providers: [
-        WorklogsService,
-        { provide: PrismaService, useValue: prisma },
-      ],
+      providers: [WorklogsService, { provide: PrismaService, useValue: prisma }],
     }).compile();
     service = module.get(WorklogsService);
   });
@@ -28,7 +25,7 @@ describe('WorklogsService', () => {
       const result = await service.findAll();
       expect(result).toEqual([worklogWithComponent]);
       expect(prisma.worklog.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: expect.objectContaining({ deletedAt: null }) }),
+        expect.objectContaining({ where: expect.objectContaining({ deletedAt: null }) })
       );
     });
 

@@ -66,7 +66,13 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Th({ children, align = 'right' }: { children: React.ReactNode; align?: 'left' | 'right' }) {
+function Th({
+  children,
+  align = 'right',
+}: {
+  children: React.ReactNode;
+  align?: 'left' | 'right';
+}) {
   return (
     <TableHeader
       className={`border-b border-mgs-border bg-mgs-bg px-4 py-2.5 font-mono text-[10px] font-normal uppercase tracking-[0.8px] text-mgs-text-faint ${
@@ -81,11 +87,14 @@ function Th({ children, align = 'right' }: { children: React.ReactNode; align?: 
 function BillableRow({ client }: { client: ClientHoursDto }) {
   const isOver = client.remaining < 0;
 
-  let pctColor = '#10b981';
-  if (client.percentUsed > 100) pctColor = '#ef4444';
-  else if (client.percentUsed >= 85) pctColor = '#f59e0b';
-  else if (client.percentUsed > 0) pctColor = '#10b981';
-  else pctColor = '#475569';
+  const pctColor =
+    client.percentUsed > 100
+      ? '#ef4444'
+      : client.percentUsed >= 85
+        ? '#f59e0b'
+        : client.percentUsed > 0
+          ? '#10b981'
+          : '#475569';
 
   return (
     <tr className="group">
@@ -98,7 +107,9 @@ function BillableRow({ client }: { client: ClientHoursDto }) {
       <td className="border-b border-mgs-border-dark px-4 py-2.5 text-right font-mono text-[11px] text-mgs-green-light group-hover:bg-mgs-card">
         {client.used.toFixed(2)}
       </td>
-      <td className={`border-b border-mgs-border-dark px-4 py-2.5 text-right font-mono text-[11px] group-hover:bg-mgs-card ${isOver ? 'text-mgs-red-light' : 'text-mgs-purple-light'}`}>
+      <td
+        className={`border-b border-mgs-border-dark px-4 py-2.5 text-right font-mono text-[11px] group-hover:bg-mgs-card ${isOver ? 'text-mgs-red-light' : 'text-mgs-purple-light'}`}
+      >
         {Math.abs(client.remaining).toFixed(2)}
         {isOver && (
           <span className="ml-1.5 rounded-[3px] border border-mgs-red/25 bg-mgs-red/10 px-[5px] py-[1px] text-[9px] font-bold uppercase tracking-tight text-mgs-red-light">

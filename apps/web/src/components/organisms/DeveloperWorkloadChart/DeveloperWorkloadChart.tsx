@@ -1,10 +1,4 @@
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Tooltip,
-} from 'chart.js';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Tooltip } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
 import type { DeveloperWorkloadDto } from '@mgs/shared';
 import { LegendItem } from '../../atoms/LegendItem/LegendItem';
@@ -15,9 +9,7 @@ interface DeveloperWorkloadChartProps {
   developers: DeveloperWorkloadDto[];
 }
 
-export function DeveloperWorkloadChart({
-  developers,
-}: DeveloperWorkloadChartProps) {
+export function DeveloperWorkloadChart({ developers }: DeveloperWorkloadChartProps) {
   const sorted = [...developers].sort((a, b) => b.totalHours - a.totalHours);
 
   const data = {
@@ -82,14 +74,9 @@ export function DeveloperWorkloadChart({
           <LegendItem color="#8b5cf6" label="Non-Billable" />
         </div>
       </div>
-      <div
-        className="relative"
-        style={{ height: Math.max(200, sorted.length * 40) }}
-      >
+      <div className="relative" style={{ height: Math.max(200, sorted.length * 40) }}>
         <Bar data={data} options={options} />
       </div>
     </div>
   );
 }
-
-

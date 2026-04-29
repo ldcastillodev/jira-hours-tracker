@@ -23,8 +23,8 @@ function makeConfigService(hasCredentials = true) {
   if (hasCredentials) {
     get
       .mockReturnValueOnce('https://test.jira.example.com') // JIRA_BASE_URL
-      .mockReturnValueOnce('test@example.com')               // JIRA_EMAIL
-      .mockReturnValueOnce('test-token');                    // JIRA_API_TOKEN
+      .mockReturnValueOnce('test@example.com') // JIRA_EMAIL
+      .mockReturnValueOnce('test-token'); // JIRA_API_TOKEN
   } else {
     get.mockReturnValue(undefined);
   }
@@ -163,7 +163,7 @@ describe('JiraSyncService', () => {
       expect.objectContaining({
         where: { jiraWorklogId: { in: ['jira-wl-orphan-999'] } },
         data: expect.objectContaining({ deletedAt: expect.any(Date) }),
-      }),
+      })
     );
   });
 

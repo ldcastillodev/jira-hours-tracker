@@ -73,14 +73,12 @@ export function FilterForm({ projects, developers, onSubmit, loading }: FilterFo
   }
 
   function toggleProject(id: number) {
-    setProjectIds((prev) =>
-      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id],
-    );
+    setProjectIds((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]));
   }
 
   function toggleDeveloper(email: string) {
     setDeveloperEmails((prev) =>
-      prev.includes(email) ? prev.filter((e) => e !== email) : [...prev, email],
+      prev.includes(email) ? prev.filter((e) => e !== email) : [...prev, email]
     );
   }
 
@@ -133,8 +131,8 @@ export function FilterForm({ projects, developers, onSubmit, loading }: FilterFo
         {/* Smart Date Picker */}
         <div>
           <Label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.9px] text-mgs-text-faint">
-            {period === 'week' ? 'Week (select any day)' : period === 'month' ? 'Month' : 'Date'}
-            {' '}<span className="text-mgs-red">*</span>
+            {period === 'week' ? 'Week (select any day)' : period === 'month' ? 'Month' : 'Date'}{' '}
+            <span className="text-mgs-red">*</span>
           </Label>
           <DatePicker
             selected={selectedDate}
@@ -147,9 +145,7 @@ export function FilterForm({ projects, developers, onSubmit, loading }: FilterFo
             wrapperClassName="w-full"
           />
           {period === 'week' && startDate && (
-            <p className="mt-1 text-[10px] text-mgs-text-dim">
-              Week of {startDate}
-            </p>
+            <p className="mt-1 text-[10px] text-mgs-text-dim">Week of {startDate}</p>
           )}
         </div>
 
@@ -174,9 +170,7 @@ export function FilterForm({ projects, developers, onSubmit, loading }: FilterFo
         />
       </div>
 
-      {error && (
-        <p className="mt-3 text-xs text-mgs-red-light">{error}</p>
-      )}
+      {error && <p className="mt-3 text-xs text-mgs-red-light">{error}</p>}
 
       <div className="mt-5 flex justify-end">
         <Button
@@ -210,9 +204,7 @@ function MultiSelectBox({
 }: MultiSelectBoxProps) {
   const [search, setSearch] = useState('');
 
-  const filtered = items.filter((item) =>
-    item.label.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filtered = items.filter((item) => item.label.toLowerCase().includes(search.toLowerCase()));
 
   const allSelected = selectedIds.length === items.length && items.length > 0;
   const selectedCount = selectedIds.length;

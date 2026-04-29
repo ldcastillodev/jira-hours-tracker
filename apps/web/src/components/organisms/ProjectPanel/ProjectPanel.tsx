@@ -89,17 +89,10 @@ export function ProjectPanel({ projects, onRefresh }: ProjectPanelProps) {
                   {proj.monthlyBudget != null ? proj.monthlyBudget : '—'}
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <Button
-                    variant="link-blue"
-                    className="mr-2"
-                    onClick={() => openEdit(proj)}
-                  >
+                  <Button variant="link-blue" className="mr-2" onClick={() => openEdit(proj)}>
                     Edit
                   </Button>
-                  <Button
-                    variant="link-red"
-                    onClick={() => setDeleting(proj)}
-                  >
+                  <Button variant="link-red" onClick={() => setDeleting(proj)}>
                     Delete
                   </Button>
                 </td>
@@ -135,7 +128,12 @@ export function ProjectPanel({ projects, onRefresh }: ProjectPanelProps) {
         onClose={() => setDeleting(null)}
         onConfirm={handleDelete}
         title="Delete Project"
-        message={<>Are you sure you want to delete <strong className="text-mgs-text">{deleting?.name}</strong>?</>}
+        message={
+          <>
+            Are you sure you want to delete{' '}
+            <strong className="text-mgs-text">{deleting?.name}</strong>?
+          </>
+        }
         loading={deleteLoading}
       />
     </div>
@@ -144,7 +142,9 @@ export function ProjectPanel({ projects, onRefresh }: ProjectPanelProps) {
 
 function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <TableHeader className={`px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.8px] text-mgs-text-faint ${className}`}>
+    <TableHeader
+      className={`px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.8px] text-mgs-text-faint ${className}`}
+    >
       {children}
     </TableHeader>
   );

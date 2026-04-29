@@ -29,7 +29,7 @@ interface Developer {
 /** Re-bucket a details slice into a timeline keyed by date */
 function buildTimeline(
   details: CustomReportDetailDto[],
-  allDates: string[],
+  allDates: string[]
 ): CustomReportTimelineEntryDto[] {
   const buckets = new Map<string, { billable: number; nonBillable: number }>();
   for (const d of allDates) buckets.set(d, { billable: 0, nonBillable: 0 });
@@ -66,7 +66,9 @@ export function CustomReports() {
   const [lastFilters, setLastFilters] = useState<FilterValues | null>(null);
   const [stale, setStale] = useState(false);
 
-  useDataRefresh(() => { if (report) setStale(true); });
+  useDataRefresh(() => {
+    if (report) setStale(true);
+  });
 
   // Tab state
   const [activeDevTab, setActiveDevTab] = useState<string>('__all__');
@@ -85,7 +87,8 @@ export function CustomReports() {
 
     const params = new URLSearchParams({ period: values.period, startDate: values.startDate });
     if (values.projectIds.length > 0) params.set('projectIds', values.projectIds.join(','));
-    if (values.developerEmails.length > 0) params.set('developerEmails', values.developerEmails.join(','));
+    if (values.developerEmails.length > 0)
+      params.set('developerEmails', values.developerEmails.join(','));
 
     try {
       const data = await fetchApi<CustomReportDto>(`/reports/custom?${params}`);
@@ -117,10 +120,7 @@ export function CustomReports() {
   }, [report, activeDevTab]);
 
   // Project names within active dev slice
-  const projNames = useMemo(
-    () => [...new Set(devDetails.map((d) => d.project))],
-    [devDetails],
-  );
+  const projNames = useMemo(() => [...new Set(devDetails.map((d) => d.project))], [devDetails]);
 
   // Filtered details for the active proj tab (within the active dev slice)
   const sliceDetails = useMemo(() => {
@@ -131,7 +131,7 @@ export function CustomReports() {
 
   const sliceTimeline = useMemo(
     () => buildTimeline(sliceDetails, allDates),
-    [sliceDetails, allDates],
+    [sliceDetails, allDates]
   );
 
   const sliceSummaryData = useMemo(() => sliceSummary(sliceDetails), [sliceDetails]);
@@ -143,9 +143,7 @@ export function CustomReports() {
     return map;
   }, [developers]);
 
-  const badge = lastFilters
-    ? `${lastFilters.period} · ${lastFilters.startDate}`
-    : 'Custom';
+  const badge = lastFilters ? `${lastFilters.period} · ${lastFilters.startDate}` : 'Custom';
 
   return (
     <>
@@ -179,20 +177,22 @@ export function CustomReports() {
 
         {loading && (
           <div className="flex items-center justify-center rounded-xl border border-mgs-border bg-mgs-card-alt py-16">
-            <span className="animate-pulse font-mono text-sm text-mgs-text-dim">Generating report…</span>
+            <span className="animate-pulse font-mono text-sm text-mgs-text-dim">
+              Generating report…
+            </span>
           </div>
         )}
 
-        {!loading && error && (
-          <Alert variant="page">
-            {error}
-          </Alert>
-        )}
+        {!loading && error && <Alert variant="page">{error}</Alert>}
 
         {!loading && report && (
           <>
             {/* Date range badge */}
-            <DateRangeBadge period={report.period} startDate={report.startDate} endDate={report.endDate} />
+            <DateRangeBadge
+              period={report.period}
+              startDate={report.startDate}
+              endDate={report.endDate}
+            />
             {/* Global summary stats */}
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
               <StatCard
@@ -239,7 +239,10 @@ export function CustomReports() {
                 <TabBar>
                   <Tab
                     active={activeDevTab === '__all__'}
-                    onClick={() => { setActiveDevTab('__all__'); setActiveProjTab('__all__'); }}
+                    onClick={() => {
+                      setActiveDevTab('__all__');
+                      setActiveProjTab('__all__');
+                    }}
                   >
                     All Developers
                   </Tab>
@@ -247,7 +250,10 @@ export function CustomReports() {
                     <Tab
                       key={email}
                       active={activeDevTab === email}
-                      onClick={() => { setActiveDevTab(email); setActiveProjTab('__all__'); }}
+                      onClick={() => {
+                        setActiveDevTab(email);
+                        setActiveProjTab('__all__');
+                      }}
                     >
                       {devNameMap.get(email) ?? email}
                     </Tab>
@@ -296,13 +302,22 @@ export function CustomReports() {
                     {/* Per-slice summary */}
                     <div className="mt-3 flex flex-wrap gap-4 text-xs text-mgs-text-muted">
                       <span>
-                        <span className="font-semibold text-mgs-text">{sliceSummaryData.total.toFixed(1)}h</span> total
+                        <span className="font-semibold text-mgs-text">
+                          {sliceSummaryData.total.toFixed(1)}h
+                        </span>{' '}
+                        total
                       </span>
                       <span>
-                        <span className="font-semibold" style={{ color: '#10b981' }}>{sliceSummaryData.billable.toFixed(1)}h</span> billable
+                        <span className="font-semibold" style={{ color: '#10b981' }}>
+                          {sliceSummaryData.billable.toFixed(1)}h
+                        </span>{' '}
+                        billable
                       </span>
                       <span>
-                        <span className="font-semibold" style={{ color: '#8b5cf6' }}>{sliceSummaryData.nonBillable.toFixed(1)}h</span> non-billable
+                        <span className="font-semibold" style={{ color: '#8b5cf6' }}>
+                          {sliceSummaryData.nonBillable.toFixed(1)}h
+                        </span>{' '}
+                        non-billable
                       </span>
                       <span>{sliceDetails.length} entries</span>
                     </div>
@@ -330,11 +345,24 @@ export function CustomReports() {
   );
 }
 
-function DateRangeBadge({ period, startDate, endDate }: { period: 'day' | 'week' | 'month'; startDate: string; endDate: string }) {
+function DateRangeBadge({
+  period,
+  startDate,
+  endDate,
+}: {
+  period: 'day' | 'week' | 'month';
+  startDate: string;
+  endDate: string;
+}) {
   function formatRange(): string {
     const s = new Date(`${startDate}T00:00:00Z`);
     const e = new Date(`${endDate}T00:00:00Z`);
-    const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' };
+    const opts: Intl.DateTimeFormatOptions = {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      timeZone: 'UTC',
+    };
 
     if (period === 'day') {
       return s.toLocaleDateString('en-US', opts);
@@ -358,18 +386,8 @@ function DateRangeBadge({ period, startDate, endDate }: { period: 'day' | 'week'
   );
 }
 
-function TabBar({
-  children,
-  secondary,
-}: {
-  children: React.ReactNode;
-  secondary?: boolean;
-}) {
-  return (
-    <div className={`flex flex-wrap gap-1 ${secondary ? 'pb-2' : 'pb-0'}` }>
-      {children}
-    </div>
-  );
+function TabBar({ children, secondary }: { children: React.ReactNode; secondary?: boolean }) {
+  return <div className={`flex flex-wrap gap-1 ${secondary ? 'pb-2' : 'pb-0'}`}>{children}</div>;
 }
 
 function Tab({
@@ -389,9 +407,7 @@ function Tab({
         type="button"
         onClick={onClick}
         className={`rounded px-2.5 py-1 text-[11px] font-medium transition-colors ${
-          active
-            ? 'bg-mgs-border text-mgs-text'
-            : 'text-mgs-text-dim hover:text-mgs-text-muted'
+          active ? 'bg-mgs-border text-mgs-text' : 'text-mgs-text-dim hover:text-mgs-text-muted'
         }`}
       >
         {children}

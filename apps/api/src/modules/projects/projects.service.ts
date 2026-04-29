@@ -70,7 +70,7 @@ export class ProjectsService {
     });
     if (conflict)
       throw new ConflictException(
-        `A project named "${project.name}" already exists. Rename it before activating.`,
+        `A project named "${project.name}" already exists. Rename it before activating.`
       );
     return this.prisma.project.update({
       where: { id },
@@ -89,7 +89,7 @@ export class ProjectsService {
     });
     if (conflict)
       throw new ConflictException(
-        `A project named "${project.name}" already exists. Rename it before activating.`,
+        `A project named "${project.name}" already exists. Rename it before activating.`
       );
     // Check component name conflicts
     for (const comp of project.components) {
@@ -98,7 +98,7 @@ export class ProjectsService {
       });
       if (compConflict)
         throw new ConflictException(
-          `A component named "${comp.name}" already exists. Rename it before activating.`,
+          `A component named "${comp.name}" already exists. Rename it before activating.`
         );
     }
     await this.prisma.project.update({ where: { id }, data: { deletedAt: null } });
@@ -134,14 +134,13 @@ export class ProjectsService {
     });
     if (existingForProject)
       throw new ConflictException(
-        `Project already has component "${existingForProject.name}". Remove it first.`,
+        `Project already has component "${existingForProject.name}". Remove it first.`
       );
 
     const conflict = await this.prisma.component.findFirst({
       where: { name: data.name, deletedAt: null },
     });
-    if (conflict)
-      throw new ConflictException(`A component named "${data.name}" already exists.`);
+    if (conflict) throw new ConflictException(`A component named "${data.name}" already exists.`);
     return this.prisma.component.create({
       data: { name: data.name, isBillable: data.isBillable, projectId },
     });
@@ -154,8 +153,7 @@ export class ProjectsService {
       const conflict = await this.prisma.component.findFirst({
         where: { name: data.name, deletedAt: null, id: { not: id } },
       });
-      if (conflict)
-        throw new ConflictException(`A component named "${data.name}" already exists.`);
+      if (conflict) throw new ConflictException(`A component named "${data.name}" already exists.`);
     }
     return this.prisma.component.update({ where: { id }, data });
   }
@@ -183,7 +181,7 @@ export class ProjectsService {
     });
     if (conflict)
       throw new ConflictException(
-        `A component named "${comp.name}" already exists. Rename it before activating.`,
+        `A component named "${comp.name}" already exists. Rename it before activating.`
       );
     return this.prisma.component.update({ where: { id }, data: { deletedAt: null } });
   }

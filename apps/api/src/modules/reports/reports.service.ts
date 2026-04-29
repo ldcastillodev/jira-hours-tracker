@@ -64,7 +64,7 @@ export class ReportsService {
       const isBillable = project.components[0]?.isBillable ?? true;
       const used = project.components.reduce(
         (sum, comp) => sum + comp.worklogs.reduce((s, w) => s + Number(w.hours), 0),
-        0,
+        0
       );
       const contracted = isBillable ? Number(project.monthlyBudget ?? 0) : 0;
       const remaining = isBillable ? contracted - used : 0;
@@ -97,7 +97,7 @@ export class ReportsService {
     });
 
     const clients = [...activeClients, ...inactiveClients].sort((a, b) =>
-      a.projectName.localeCompare(b.projectName),
+      a.projectName.localeCompare(b.projectName)
     );
 
     const billableClients = clients.filter((c) => c.isBillable);
@@ -130,7 +130,11 @@ export class ReportsService {
 
     for (const w of worklogs) {
       const key = w.assigned;
-      const entry = devMap.get(key) ?? { name: devNameMap.get(key) ?? key, billable: 0, nonBillable: 0 };
+      const entry = devMap.get(key) ?? {
+        name: devNameMap.get(key) ?? key,
+        billable: 0,
+        nonBillable: 0,
+      };
       if (w.component.isBillable) {
         entry.billable += Number(w.hours);
       } else {
@@ -170,9 +174,7 @@ export class ReportsService {
     });
 
     // Active components always shown; inactive only if they have hours in the period
-    const filtered = components.filter(
-      (c) => c.deletedAt === null || c.worklogs.length > 0,
-    );
+    const filtered = components.filter((c) => c.deletedAt === null || c.worklogs.length > 0);
 
     return {
       month: resolvedMonth,
@@ -316,7 +318,7 @@ export class ReportsService {
 
   private computeDateRange(
     period: 'day' | 'week' | 'month',
-    startDate: string,
+    startDate: string
   ): { start: Date; end: Date } {
     const ref = new Date(`${startDate}T00:00:00Z`);
     if (period === 'day') {
@@ -327,7 +329,7 @@ export class ReportsService {
     if (period === 'week') {
       // Monday of the week containing ref
       const dow = ref.getUTCDay(); // 0=Sun, 1=Mon ... 6=Sat
-      const diffToMonday = (dow === 0 ? -6 : 1 - dow);
+      const diffToMonday = dow === 0 ? -6 : 1 - dow;
       const start = new Date(ref);
       start.setUTCDate(start.getUTCDate() + diffToMonday);
       const end = new Date(start);

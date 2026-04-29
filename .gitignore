@@ -21,6 +21,9 @@ Thumbs.db
 # Prisma
 packages/db/prisma/migrations/
 
+# Linting
+.eslintcache
+
 # Logs
 *.log
 npm-debug.log*

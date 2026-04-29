@@ -40,18 +40,10 @@ export function ProjectForm({ initial, onSubmit, onCancel }: ProjectFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {error && (
-        <Alert variant="inline">
-          {error}
-        </Alert>
-      )}
+      {error && <Alert variant="inline">{error}</Alert>}
       <label className="block">
         <Label required>Name</Label>
-        <Input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
+        <Input value={name} onChange={(e) => setName(e.target.value)} required />
       </label>
       <label className="block">
         <Label>Monthly Budget (hrs)</Label>
@@ -65,18 +57,10 @@ export function ProjectForm({ initial, onSubmit, onCancel }: ProjectFormProps) {
         />
       </label>
       <div className="flex justify-end gap-2 pt-2">
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={onCancel}
-        >
+        <Button type="button" variant="secondary" onClick={onCancel}>
           Cancel
         </Button>
-        <Button
-          type="submit"
-          variant="primary"
-          disabled={loading}
-        >
+        <Button type="submit" variant="primary" disabled={loading}>
           {loading ? 'Saving...' : initial ? 'Update' : 'Create'}
         </Button>
       </div>

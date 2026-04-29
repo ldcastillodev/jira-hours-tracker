@@ -28,7 +28,9 @@ export class JiraSyncController {
       return { success: false, message: result.message };
     }
 
-    const monthName = new Date(currentYear, month - 1, 1).toLocaleString('en-US', { month: 'long' });
+    const monthName = new Date(currentYear, month - 1, 1).toLocaleString('en-US', {
+      month: 'long',
+    });
     const synced = result.inserted + result.updated;
     const parts = [`Synced ${synced} changes from ${monthName} ${currentYear}`];
     if (result.deleted > 0) parts.push(`${result.deleted} removed`);

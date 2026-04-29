@@ -16,12 +16,12 @@ GET /reports/custom
 
 #### Query params
 
-| Parámetro | Tipo | Requerido | Descripción |
-|---|---|---|---|
-| `period` | `day` \| `week` \| `month` | ✅ | Granularidad del reporte |
-| `startDate` | `YYYY-MM-DD` | ✅ | Fecha de inicio del período |
-| `projectIds` | `1,2,3` (CSV) | No | Filtrar por proyectos |
-| `developerEmails` | `a@b.com,c@d.com` (CSV) | No | Filtrar por desarrolladores |
+| Parámetro         | Tipo                       | Requerido | Descripción                 |
+| ----------------- | -------------------------- | --------- | --------------------------- |
+| `period`          | `day` \| `week` \| `month` | ✅        | Granularidad del reporte    |
+| `startDate`       | `YYYY-MM-DD`               | ✅        | Fecha de inicio del período |
+| `projectIds`      | `1,2,3` (CSV)              | No        | Filtrar por proyectos       |
+| `developerEmails` | `a@b.com,c@d.com` (CSV)    | No        | Filtrar por desarrolladores |
 
 #### Lógica de rango de fechas (`computeDateRange`)
 
@@ -66,12 +66,12 @@ GET /reports/custom
 
 ### Archivos modificados
 
-| Archivo | Cambio |
-|---|---|
-| `apps/api/src/modules/reports/reports.service.ts` | Método `getCustomReport(params)` |
+| Archivo                                              | Cambio                                             |
+| ---------------------------------------------------- | -------------------------------------------------- |
+| `apps/api/src/modules/reports/reports.service.ts`    | Método `getCustomReport(params)`                   |
 | `apps/api/src/modules/reports/reports.controller.ts` | `GET /reports/custom` con validación de parámetros |
-| `packages/shared/src/dto/custom-report.dto.ts` | DTOs del reporte |
-| `packages/shared/src/index.ts` | Re-export de `custom-report.dto` |
+| `packages/shared/src/dto/custom-report.dto.ts`       | DTOs del reporte                                   |
+| `packages/shared/src/index.ts`                       | Re-export de `custom-report.dto`                   |
 
 ---
 
@@ -88,6 +88,7 @@ GET /reports/custom
 #### `CustomReports.tsx` — Página principal
 
 Flujo de datos:
+
 1. Carga `/projects` y `/developers` con `useApi`
 2. `handleGenerate()` llama a `GET /reports/custom` con los filtros
 3. `report.details[]` se filtra en el cliente según las tabs activas (Developer → Project)
@@ -95,14 +96,15 @@ Flujo de datos:
 
 **Estado principal:**
 
-| Estado | Descripción |
-|---|---|
-| `report` | Resultado de la API (`CustomReportDto \| null`) |
-| `activeDevTab` | Email del developer activo, o `'__all__'` |
-| `activeProjTab` | Nombre del proyecto activo, o `'__all__'` |
-| `activeChartRef` | Ref al `ChartJS` del tab visible (para export) |
+| Estado           | Descripción                                     |
+| ---------------- | ----------------------------------------------- |
+| `report`         | Resultado de la API (`CustomReportDto \| null`) |
+| `activeDevTab`   | Email del developer activo, o `'__all__'`       |
+| `activeProjTab`  | Nombre del proyecto activo, o `'__all__'`       |
+| `activeChartRef` | Ref al `ChartJS` del tab visible (para export)  |
 
 **Sección de tabs del gráfico:**
+
 - L1: "All Developers" + un tab por email único en `report.details`
 - L2: visible solo cuando hay >1 proyecto — "All Projects" + un tab por proyecto
 - Cambiar L1 resetea L2 a `'__all__'`
@@ -112,11 +114,11 @@ Flujo de datos:
 
 **Date picker:** usa `react-datepicker` (no MUI, sin Emotion).
 
-| Período | Comportamiento |
-|---|---|
-| `day` | Calendario estándar → `YYYY-MM-DD` |
-| `week` | Cualquier día → snap al lunes de esa semana |
-| `month` | `showMonthYearPicker` → `YYYY-MM-01` |
+| Período | Comportamiento                              |
+| ------- | ------------------------------------------- |
+| `day`   | Calendario estándar → `YYYY-MM-DD`          |
+| `week`  | Cualquier día → snap al lunes de esa semana |
+| `month` | `showMonthYearPicker` → `YYYY-MM-01`        |
 
 Cambiar el período limpia la fecha seleccionada (usuario debe volver a seleccionar).
 
@@ -138,10 +140,10 @@ Tabla de detalles con tres vistas de categoría y paginación.
 
 **L1 — Category tabs:**
 
-| Tab | Sub-tabs | Columnas |
-|---|---|---|
-| By Developer | Un sub-tab por email único | Date, Project, Component, Ticket, Hours, Billable |
-| By Project | Un sub-tab por proyecto | Date, Developer, Component, Ticket, Hours, Billable |
+| Tab              | Sub-tabs                        | Columnas                                                     |
+| ---------------- | ------------------------------- | ------------------------------------------------------------ |
+| By Developer     | Un sub-tab por email único      | Date, Project, Component, Ticket, Hours, Billable            |
+| By Project       | Un sub-tab por proyecto         | Date, Developer, Component, Ticket, Hours, Billable          |
 | By Date/Interval | Depende del período (ver abajo) | Date, Developer, Project, Component, Ticket, Hours, Billable |
 
 **"By Date/Interval" según período:**
@@ -162,6 +164,7 @@ Tabla de detalles con tres vistas de categoría y paginación.
 Menú desplegable con dos opciones de exportación.
 
 **Chart as HTML:**
+
 - Lee el tema en tiempo de exportación (`data-theme` attribute)
 - Extrae `chart.data.labels` + `datasets` del `chartRef` activo (refleja el tab visible)
 - La línea de filtros muestra **nombres de proyecto** (derivados de `report.details`), no IDs numéricos
@@ -169,6 +172,7 @@ Menú desplegable con dos opciones de exportación.
 - Contenedor `max-width: 1200px`, `height: 600px`, `maintainAspectRatio: false` — el gráfico ocupa todo el ancho disponible
 
 **Data as Excel (.xlsx):**
+
 - **Sheet "Details":** todas las filas (no paginadas), columnas: Date, Project, Component, Developer, Ticket Key, Hours, Billable. Sin `jiraWorklogId`.
 - **Sheet "Summary":** agrupado por par (Project, Developer) — columnas: Project, Developer, Total Hours, Billable Hours, Non-Billable Hours. Ordenado por Project → Developer. Incluye fila de totales al final.
   - `Project` muestra siempre el **nombre** (e.g., "MgS"), no el ID numérico — el backend devuelve `w.component.project.name` directamente en `details[].project`.
@@ -177,10 +181,10 @@ Menú desplegable con dos opciones de exportación.
 
 ## Dependencias añadidas
 
-| Paquete | Scope | Versión |
-|---|---|---|
-| `react-datepicker` | `apps/web` | latest |
-| `@types/react-datepicker` | `apps/web` (devDep) | latest |
+| Paquete                   | Scope               | Versión |
+| ------------------------- | ------------------- | ------- |
+| `react-datepicker`        | `apps/web`          | latest  |
+| `@types/react-datepicker` | `apps/web` (devDep) | latest  |
 
 ---
 

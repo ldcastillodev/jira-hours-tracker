@@ -25,7 +25,12 @@ function formatDateLabel(dateStr: string, period: 'day' | 'week' | 'month'): str
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
   }
   if (period === 'week') {
-    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
+    return d.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      timeZone: 'UTC',
+    });
   }
   // day
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
@@ -103,5 +108,3 @@ export function ReportChart({ timeline, period, chartRef }: ReportChartProps) {
     </div>
   );
 }
-
-

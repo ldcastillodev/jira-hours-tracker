@@ -13,11 +13,7 @@ interface Developer {
 
 interface DeveloperFormProps {
   initial?: Developer;
-  onSubmit: (data: {
-    name: string;
-    email: string;
-    slackId?: string | null;
-  }) => Promise<void>;
+  onSubmit: (data: { name: string; email: string; slackId?: string | null }) => Promise<void>;
   onCancel: () => void;
 }
 
@@ -47,11 +43,7 @@ export function DeveloperForm({ initial, onSubmit, onCancel }: DeveloperFormProp
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {error && (
-        <Alert variant="inline">
-          {error}
-        </Alert>
-      )}
+      {error && <Alert variant="inline">{error}</Alert>}
       <Field label="Name" required>
         <Input value={name} onChange={(e) => setName(e.target.value)} required />
       </Field>
@@ -62,18 +54,10 @@ export function DeveloperForm({ initial, onSubmit, onCancel }: DeveloperFormProp
         <Input value={slackId} onChange={(e) => setSlackId(e.target.value)} />
       </Field>
       <div className="flex justify-end gap-2 pt-2">
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={onCancel}
-        >
+        <Button type="button" variant="secondary" onClick={onCancel}>
           Cancel
         </Button>
-        <Button
-          type="submit"
-          variant="primary"
-          disabled={loading}
-        >
+        <Button type="submit" variant="primary" disabled={loading}>
           {loading ? 'Saving...' : initial ? 'Update' : 'Create'}
         </Button>
       </div>
@@ -81,7 +65,15 @@ export function DeveloperForm({ initial, onSubmit, onCancel }: DeveloperFormProp
   );
 }
 
-function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactElement }) {
+function Field({
+  label,
+  required,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  children: React.ReactElement;
+}) {
   return (
     <label className="block">
       <Label required={required}>{label}</Label>

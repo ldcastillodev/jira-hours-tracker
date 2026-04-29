@@ -2,7 +2,12 @@ import { Test } from '@nestjs/testing';
 import { ReportsService } from './reports.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { createMockPrismaService } from '../../../test/helpers/mock-prisma';
-import { DUMMY_PROJECTS, DUMMY_COMPONENTS, DUMMY_DEVELOPERS, DUMMY_WORKLOGS } from '../../../test/fixtures/dummy-data';
+import {
+  DUMMY_PROJECTS,
+  DUMMY_COMPONENTS,
+  DUMMY_DEVELOPERS,
+  DUMMY_WORKLOGS,
+} from '../../../test/fixtures/dummy-data';
 
 const componentAlphaWithProject = { ...DUMMY_COMPONENTS[0], project: DUMMY_PROJECTS[0] };
 const componentBetaWithProject = { ...DUMMY_COMPONENTS[1], project: DUMMY_PROJECTS[1] };
@@ -21,10 +26,7 @@ describe('ReportsService', () => {
   beforeEach(async () => {
     prisma = createMockPrismaService();
     const module = await Test.createTestingModule({
-      providers: [
-        ReportsService,
-        { provide: PrismaService, useValue: prisma },
-      ],
+      providers: [ReportsService, { provide: PrismaService, useValue: prisma }],
     }).compile();
     service = module.get(ReportsService);
   });
@@ -34,10 +36,12 @@ describe('ReportsService', () => {
       // Project Alpha: billable, 100 budget, 8 hours used
       const activeProject = {
         ...DUMMY_PROJECTS[0],
-        components: [{
-          ...DUMMY_COMPONENTS[0],
-          worklogs: [{ hours: 8 }],
-        }],
+        components: [
+          {
+            ...DUMMY_COMPONENTS[0],
+            worklogs: [{ hours: 8 }],
+          },
+        ],
       };
       prisma.project.findMany.mockResolvedValue([activeProject]);
       prisma.worklog.findMany.mockResolvedValue([]); // no inactive project worklogs
@@ -55,10 +59,12 @@ describe('ReportsService', () => {
       const overBudgetProject = {
         ...DUMMY_PROJECTS[0],
         monthlyBudget: 5,
-        components: [{
-          ...DUMMY_COMPONENTS[0],
-          worklogs: [{ hours: 10 }], // 10h used, 5h budget
-        }],
+        components: [
+          {
+            ...DUMMY_COMPONENTS[0],
+            worklogs: [{ hours: 10 }], // 10h used, 5h budget
+          },
+        ],
       };
       prisma.project.findMany.mockResolvedValue([overBudgetProject]);
       prisma.worklog.findMany.mockResolvedValue([]);
@@ -73,7 +79,7 @@ describe('ReportsService', () => {
   describe('getDeveloperWorkload', () => {
     it('aggregates hours by developer email', async () => {
       // dev1 on billable component, dev3 on non-billable component
-      const wlBillable = { ...DUMMY_WORKLOGS[0], component: DUMMY_COMPONENTS[0] };    // dev1, billable, 8h
+      const wlBillable = { ...DUMMY_WORKLOGS[0], component: DUMMY_COMPONENTS[0] }; // dev1, billable, 8h
       const wlNonBillable = { ...DUMMY_WORKLOGS[3], component: DUMMY_COMPONENTS[1] }; // dev3, non-billable, 2h
 
       prisma.worklog.findMany.mockResolvedValue([wlBillable, wlNonBillable]);

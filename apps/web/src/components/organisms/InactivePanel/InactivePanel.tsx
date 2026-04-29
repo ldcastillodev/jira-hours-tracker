@@ -50,18 +50,12 @@ export function InactivePanel() {
   }
 
   if (inactive.error) {
-    return (
-      <Alert variant="section">
-        {inactive.error}
-      </Alert>
-    );
+    return <Alert variant="section">{inactive.error}</Alert>;
   }
 
   const data = inactive.data!;
   const isEmpty =
-    data.projects.length === 0 &&
-    data.components.length === 0 &&
-    data.developers.length === 0;
+    data.projects.length === 0 && data.components.length === 0 && data.developers.length === 0;
 
   if (isEmpty) {
     return (
@@ -155,13 +149,7 @@ function InactiveSection({ title, children }: { title: string; children: React.R
 
 // ---- Project row ----
 
-function ProjectRow({
-  project,
-  onRefresh,
-}: {
-  project: InactiveProject;
-  onRefresh: () => void;
-}) {
+function ProjectRow({ project, onRefresh }: { project: InactiveProject; onRefresh: () => void }) {
   const [loading, setLoading] = useState<'activate' | 'cascade' | null>(null);
   const inactiveComponents = project.components.filter((c) => c.deletedAt !== null);
 
@@ -182,7 +170,9 @@ function ProjectRow({
   return (
     <tr className="border-b border-mgs-border/50 last:border-0">
       <td className="px-4 py-3 font-medium text-mgs-text">{project.name}</td>
-      <td className="px-4 py-3 text-mgs-text-muted">{project.monthlyBudget != null ? `${project.monthlyBudget}h` : '—'}</td>
+      <td className="px-4 py-3 text-mgs-text-muted">
+        {project.monthlyBudget != null ? `${project.monthlyBudget}h` : '—'}
+      </td>
       <td className="px-4 py-3 text-mgs-text-dim">{inactiveComponents.length}</td>
       <td className="px-4 py-3 text-mgs-text-dim">{formatDate(project.deletedAt)}</td>
       <td className="px-4 py-3 text-right">
@@ -249,11 +239,7 @@ function ComponentRow({
       </td>
       <td className="px-4 py-3 text-mgs-text-dim">{formatDate(component.deletedAt)}</td>
       <td className="px-4 py-3 text-right">
-        <Button
-          variant="link-blue"
-          disabled={loading}
-          onClick={handleActivate}
-        >
+        <Button variant="link-blue" disabled={loading} onClick={handleActivate}>
           {loading ? '…' : 'Activate'}
         </Button>
       </td>
@@ -291,11 +277,7 @@ function DeveloperRow({
       <td className="px-4 py-3 text-mgs-text-muted">{developer.email}</td>
       <td className="px-4 py-3 text-mgs-text-dim">{formatDate(developer.deletedAt)}</td>
       <td className="px-4 py-3 text-right">
-        <Button
-          variant="link-blue"
-          disabled={loading}
-          onClick={handleActivate}
-        >
+        <Button variant="link-blue" disabled={loading} onClick={handleActivate}>
           {loading ? '…' : 'Activate'}
         </Button>
       </td>

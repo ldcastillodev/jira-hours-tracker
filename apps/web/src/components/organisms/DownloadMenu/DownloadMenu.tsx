@@ -48,9 +48,7 @@ export function DownloadMenu({ report, chartRef }: DownloadMenuProps) {
       report.filters.developerEmails.length > 0
         ? `Developers: ${report.filters.developerEmails.join(', ')}`
         : null,
-      projectNames.length > 0
-        ? `Projects: ${projectNames.join(', ')}`
-        : null,
+      projectNames.length > 0 ? `Projects: ${projectNames.join(', ')}` : null,
     ]
       .filter(Boolean)
       .join(' &nbsp;·&nbsp; ');
@@ -61,7 +59,7 @@ export function DownloadMenu({ report, chartRef }: DownloadMenuProps) {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${filename}</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"><\/script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
     body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: ${bg}; color: ${textColor}; padding: 40px; }
@@ -118,7 +116,7 @@ export function DownloadMenu({ report, chartRef }: DownloadMenuProps) {
         },
       },
     });
-  <\/script>
+  </script>
 </body>
 </html>`;
 
@@ -141,10 +139,19 @@ export function DownloadMenu({ report, chartRef }: DownloadMenuProps) {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detailsRows), 'Details');
 
     // Summary: grouped by (Project, Developer)
-    const groupMap = new Map<string, { project: string; developer: string; total: number; billable: number; nonBillable: number }>();
+    const groupMap = new Map<
+      string,
+      { project: string; developer: string; total: number; billable: number; nonBillable: number }
+    >();
     for (const d of report.details) {
       const key = `${d.project}|||${d.developer}`;
-      const g = groupMap.get(key) ?? { project: d.project, developer: d.developer, total: 0, billable: 0, nonBillable: 0 };
+      const g = groupMap.get(key) ?? {
+        project: d.project,
+        developer: d.developer,
+        total: 0,
+        billable: 0,
+        nonBillable: 0,
+      };
       g.total += d.hours;
       if (d.billable) g.billable += d.hours;
       else g.nonBillable += d.hours;
@@ -193,7 +200,9 @@ export function DownloadMenu({ report, chartRef }: DownloadMenuProps) {
               <span className="mt-0.5 text-mgs-blue">◻</span>
               <div>
                 <div className="text-xs font-medium text-mgs-text">Chart as HTML</div>
-                <div className="text-[10px] text-mgs-text-dim">Interactive · inherits current theme</div>
+                <div className="text-[10px] text-mgs-text-dim">
+                  Interactive · inherits current theme
+                </div>
               </div>
             </Button>
             <div className="border-t border-mgs-border" />
@@ -223,4 +232,3 @@ function triggerDownload(filename: string, content: string, mimeType: string) {
   a.click();
   URL.revokeObjectURL(url);
 }
-

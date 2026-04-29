@@ -35,11 +35,7 @@ export function DeveloperPanel({ developers, onRefresh }: DeveloperPanelProps) {
     setModalOpen(true);
   }
 
-  async function handleSubmit(data: {
-    name: string;
-    email: string;
-    slackId?: string | null;
-  }) {
+  async function handleSubmit(data: { name: string; email: string; slackId?: string | null }) {
     if (editing) {
       await mutateApi(`/developers/${editing.id}`, 'PATCH', data);
       showToast('Developer updated');
@@ -94,17 +90,10 @@ export function DeveloperPanel({ developers, onRefresh }: DeveloperPanelProps) {
                 <td className="px-4 py-3 text-mgs-text-muted">{dev.email}</td>
                 <td className="px-4 py-3 font-mono text-mgs-text-dim">{dev.slackId || '—'}</td>
                 <td className="px-4 py-3 text-right">
-                  <Button
-                    variant="link-blue"
-                    className="mr-2"
-                    onClick={() => openEdit(dev)}
-                  >
+                  <Button variant="link-blue" className="mr-2" onClick={() => openEdit(dev)}>
                     Edit
                   </Button>
-                  <Button
-                    variant="link-red"
-                    onClick={() => setDeleting(dev)}
-                  >
+                  <Button variant="link-red" onClick={() => setDeleting(dev)}>
                     Delete
                   </Button>
                 </td>
@@ -140,7 +129,12 @@ export function DeveloperPanel({ developers, onRefresh }: DeveloperPanelProps) {
         onClose={() => setDeleting(null)}
         onConfirm={handleDelete}
         title="Delete Developer"
-        message={<>Are you sure you want to delete <strong className="text-mgs-text">{deleting?.name}</strong>?</>}
+        message={
+          <>
+            Are you sure you want to delete{' '}
+            <strong className="text-mgs-text">{deleting?.name}</strong>?
+          </>
+        }
         loading={deleteLoading}
       />
     </div>
@@ -149,7 +143,9 @@ export function DeveloperPanel({ developers, onRefresh }: DeveloperPanelProps) {
 
 function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <TableHeader className={`px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.8px] text-mgs-text-faint ${className}`}>
+    <TableHeader
+      className={`px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.8px] text-mgs-text-faint ${className}`}
+    >
       {children}
     </TableHeader>
   );

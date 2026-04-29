@@ -9,7 +9,5 @@
     }
   },
   "regions": ["iad1"],
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }

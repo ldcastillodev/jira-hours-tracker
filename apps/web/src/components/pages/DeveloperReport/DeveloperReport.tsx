@@ -6,16 +6,12 @@ import { StatCard } from '../../atoms/StatCard/StatCard';
 import { Alert } from '../../atoms/Alert/Alert';
 import { DeveloperWorkloadChart } from '../../organisms/DeveloperWorkloadChart/DeveloperWorkloadChart';
 import { DeveloperTable } from '../../organisms/DeveloperTable/DeveloperTable';
-import {
-  StatCardSkeleton,
-  ChartSkeleton,
-  TableSkeleton,
-} from '../../atoms/Skeleton/Skeleton';
+import { StatCardSkeleton, ChartSkeleton, TableSkeleton } from '../../atoms/Skeleton/Skeleton';
 
 export function DeveloperReport() {
   const { month, label: monthLabel } = useMonth();
   const { data, loading, error, refetch } = useApi<MonthReportDto>(
-    `/reports/developer-workload?month=${month}`,
+    `/reports/developer-workload?month=${month}`
   );
   useDataRefresh(refetch);
 
@@ -27,9 +23,7 @@ export function DeveloperReport() {
           subtitle={`See the full monthly breakdown of hours spent per developer.`}
           badge={monthLabel}
         />
-        <Alert variant="page">
-          Error loading data: {error}
-        </Alert>
+        <Alert variant="page">Error loading data: {error}</Alert>
       </>
     );
   }
@@ -95,19 +89,11 @@ export function DeveloperReport() {
 
       {/* Chart */}
       <div className="mb-7">
-        {loading ? (
-          <ChartSkeleton />
-        ) : (
-          <DeveloperWorkloadChart developers={data!.developers} />
-        )}
+        {loading ? <ChartSkeleton /> : <DeveloperWorkloadChart developers={data!.developers} />}
       </div>
 
       {/* Table */}
-      {loading ? (
-        <TableSkeleton />
-      ) : (
-        <DeveloperTable developers={data!.developers} />
-      )}
+      {loading ? <TableSkeleton /> : <DeveloperTable developers={data!.developers} />}
     </>
   );
 }

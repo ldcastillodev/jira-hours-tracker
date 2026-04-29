@@ -35,7 +35,7 @@ export class JiraSyncService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly httpService: HttpService,
-    private readonly configService: ConfigService,
+    private readonly configService: ConfigService
   ) {}
 
   async syncWorklogs(startDate: string, endDate: string) {
@@ -52,7 +52,7 @@ export class JiraSyncService {
     const headers = {
       Authorization: `Basic ${auth}`,
       Accept: 'application/json',
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
     };
 
     const startMs = new Date(startDate).getTime();
@@ -69,7 +69,7 @@ export class JiraSyncService {
     const developerEmails = new Set(dbDevelopers.map((d) => d.email));
 
     this.logger.debug(
-      `Loaded ${componentMap.size} components, ${developerEmails.size} developers from DB`,
+      `Loaded ${componentMap.size} components, ${developerEmails.size} developers from DB`
     );
 
     // ── Step 2: Paginate Jira search API (unchanged) ─────────────────────────
@@ -88,14 +88,18 @@ export class JiraSyncService {
       if (nextPageToken) body.nextPageToken = nextPageToken;
 
       const { data } = await firstValueFrom(
-        this.httpService.post<JiraSearchResponse>(url, body, { headers }),
+        this.httpService.post<JiraSearchResponse>(url, body, { headers })
       );
       jiraIssues.push(...data.issues);
       nextPageToken = data.nextPageToken;
     } while (nextPageToken);
 
     // ── Step 3: Flatten all worklogs from all issues ──────────────────────────
-    interface RawEntry { wl: JiraWorklog; componentName: string; issueKey: string; }
+    interface RawEntry {
+      wl: JiraWorklog;
+      componentName: string;
+      issueKey: string;
+    }
     const rawEntries: RawEntry[] = [];
 
     for (const issue of jiraIssues) {
@@ -136,7 +140,7 @@ export class JiraSyncService {
       }
       if (!developerEmails.has(wl.author.emailAddress)) {
         this.logger.debug(
-          `Skipping worklog ${wl.id}: no developer with email ${wl.author.emailAddress}`,
+          `Skipping worklog ${wl.id}: no developer with email ${wl.author.emailAddress}`
         );
         skippedCount++;
         continue;
@@ -201,7 +205,7 @@ export class JiraSyncService {
 
     this.logger.log(
       `Split: ${toCreate.length} to create, ${toUpdate.length} to update, ` +
-      `${unchangedCount} unchanged, ${toSoftDelete.length} to soft-delete`,
+        `${unchangedCount} unchanged, ${toSoftDelete.length} to soft-delete`
     );
 
     // ── Step 7: Batch write in chunks of 200 ────────────────────────────────
@@ -220,7 +224,7 @@ export class JiraSyncService {
         this.logger.log(`Create chunk ${chunkIdx}/${createChunks}: ${chunk.length} inserted`);
       } catch (err) {
         this.logger.error(
-          `Create chunk ${chunkIdx}/${createChunks} failed: ${(err as Error).message}`,
+          `Create chunk ${chunkIdx}/${createChunks} failed: ${(err as Error).message}`
         );
       }
     }
@@ -243,7 +247,7 @@ export class JiraSyncService {
         this.logger.log(`Update chunk ${chunkIdx}/${updateChunks}: ${chunk.length} updated`);
       } catch (err) {
         this.logger.error(
-          `Update chunk ${chunkIdx}/${updateChunks} failed: ${(err as Error).message}`,
+          `Update chunk ${chunkIdx}/${updateChunks} failed: ${(err as Error).message}`
         );
       }
     }
@@ -265,7 +269,7 @@ export class JiraSyncService {
 
     this.logger.log(
       `Sync complete: ${totalInserted} inserted, ${totalUpdated} updated, ` +
-      `${totalDeleted} deleted, ${unchangedCount} unchanged, ${skippedCount} skipped`,
+        `${totalDeleted} deleted, ${unchangedCount} unchanged, ${skippedCount} skipped`
     );
 
     return {
@@ -281,7 +285,7 @@ export class JiraSyncService {
   private async fetchAllIssueWorklogs(
     baseUrl: string,
     issueKey: string,
-    headers: Record<string, string>,
+    headers: Record<string, string>
   ): Promise<JiraWorklog[]> {
     const worklogs: JiraWorklog[] = [];
     let startAt = 0;
@@ -291,7 +295,7 @@ export class JiraSyncService {
       const { data } = await firstValueFrom(
         this.httpService.get(url, {
           headers,
-        }),
+        })
       );
 
       worklogs.push(...data.worklogs);
@@ -302,6 +306,4 @@ export class JiraSyncService {
 
     return worklogs;
   }
-
 }
-

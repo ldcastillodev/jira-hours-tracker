@@ -25,7 +25,7 @@ export async function getApp(): Promise<INestApplication> {
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
-    }),
+    })
   );
 
   await app.init();

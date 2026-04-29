@@ -23,7 +23,12 @@ function toMondayStr(dateStr: string): string {
 
 function fmtDate(dateStr: string): string {
   const d = new Date(`${dateStr}T00:00:00Z`);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+  return d.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
 }
 
 function fmtWeekLabel(mondayStr: string): string {
@@ -46,13 +51,10 @@ export function DetailsPanel({ details, period, devNameMap, reportKey }: Details
   // --- Sub-tab keys per category ---
   const developerKeys = useMemo(
     () => [...new Set(details.map((d) => d.developer))].sort(),
-    [details],
+    [details]
   );
 
-  const projectKeys = useMemo(
-    () => [...new Set(details.map((d) => d.project))].sort(),
-    [details],
-  );
+  const projectKeys = useMemo(() => [...new Set(details.map((d) => d.project))].sort(), [details]);
 
   const intervalKeys = useMemo(() => {
     if (period === 'day') {
@@ -63,12 +65,15 @@ export function DetailsPanel({ details, period, devNameMap, reportKey }: Details
   }, [details, period]);
 
   // Active sub-tab keys
-  const subTabKeys = categoryTab === 'developer' ? developerKeys
-    : categoryTab === 'project' ? projectKeys
-    : intervalKeys;
+  const subTabKeys =
+    categoryTab === 'developer'
+      ? developerKeys
+      : categoryTab === 'project'
+        ? projectKeys
+        : intervalKeys;
 
   // Resolve active sub-tab (default to first key)
-  const activeSubTab = subTabKeys.includes(subTab) ? subTab : subTabKeys[0] ?? '';
+  const activeSubTab = subTabKeys.includes(subTab) ? subTab : (subTabKeys[0] ?? '');
 
   // Filter details for active (category, subTab)
   const filtered = useMemo(() => {
@@ -93,18 +98,60 @@ export function DetailsPanel({ details, period, devNameMap, reportKey }: Details
   }, [details, categoryTab, activeSubTab, period]);
 
   // Columns per category
-  const columns: { key: string; header: string; render: (d: CustomReportDetailDto) => React.ReactNode }[] = useMemo(() => {
-    const date = { key: 'date', header: 'Date', render: (d: CustomReportDetailDto) => <span className="font-mono text-mgs-text-dim">{d.date}</span> };
-    const developer = { key: 'developer', header: 'Developer', render: (d: CustomReportDetailDto) => <span className="text-mgs-text-muted">{devNameMap.get(d.developer) ?? d.developer}</span> };
-    const project = { key: 'project', header: 'Project', render: (d: CustomReportDetailDto) => <span className="text-mgs-text-muted">{d.project}</span> };
-    const component = { key: 'component', header: 'Component', render: (d: CustomReportDetailDto) => <span className="text-mgs-text-muted">{d.component}</span> };
-    const ticket = { key: 'ticket', header: 'Ticket', render: (d: CustomReportDetailDto) => <span className="font-mono text-mgs-text-dim">{d.ticketKey}</span> };
-    const hours = { key: 'hours', header: 'Hours', render: (d: CustomReportDetailDto) => <span className="font-mono text-mgs-text">{d.hours.toFixed(1)}h</span> };
+  const columns: {
+    key: string;
+    header: string;
+    render: (d: CustomReportDetailDto) => React.ReactNode;
+  }[] = useMemo(() => {
+    const date = {
+      key: 'date',
+      header: 'Date',
+      render: (d: CustomReportDetailDto) => (
+        <span className="font-mono text-mgs-text-dim">{d.date}</span>
+      ),
+    };
+    const developer = {
+      key: 'developer',
+      header: 'Developer',
+      render: (d: CustomReportDetailDto) => (
+        <span className="text-mgs-text-muted">{devNameMap.get(d.developer) ?? d.developer}</span>
+      ),
+    };
+    const project = {
+      key: 'project',
+      header: 'Project',
+      render: (d: CustomReportDetailDto) => (
+        <span className="text-mgs-text-muted">{d.project}</span>
+      ),
+    };
+    const component = {
+      key: 'component',
+      header: 'Component',
+      render: (d: CustomReportDetailDto) => (
+        <span className="text-mgs-text-muted">{d.component}</span>
+      ),
+    };
+    const ticket = {
+      key: 'ticket',
+      header: 'Ticket',
+      render: (d: CustomReportDetailDto) => (
+        <span className="font-mono text-mgs-text-dim">{d.ticketKey}</span>
+      ),
+    };
+    const hours = {
+      key: 'hours',
+      header: 'Hours',
+      render: (d: CustomReportDetailDto) => (
+        <span className="font-mono text-mgs-text">{d.hours.toFixed(1)}h</span>
+      ),
+    };
     const billable = {
       key: 'billable',
       header: 'Billable',
       render: (d: CustomReportDetailDto) => (
-        <span className={`rounded-[20px] px-2 py-0.5 text-[10px] font-medium ${d.billable ? 'bg-green-500/10 text-green-400' : 'bg-purple-500/10 text-purple-400'}`}>
+        <span
+          className={`rounded-[20px] px-2 py-0.5 text-[10px] font-medium ${d.billable ? 'bg-green-500/10 text-green-400' : 'bg-purple-500/10 text-purple-400'}`}
+        >
           {d.billable ? 'Yes' : 'No'}
         </span>
       ),
@@ -142,15 +189,23 @@ export function DetailsPanel({ details, period, devNameMap, reportKey }: Details
       {/* L1 — Category tabs */}
       <div className="border-b border-mgs-border px-4 pt-4">
         <div className="flex flex-wrap gap-1 pb-0">
-          {([
-            ['developer', 'By Developer'],
-            ['project', 'By Project'],
-            ['interval', period === 'day' ? 'By Date' : period === 'week' ? 'By Week' : 'By Week'],
-          ] as [CategoryTab, string][]).map(([key, label]) => (
+          {(
+            [
+              ['developer', 'By Developer'],
+              ['project', 'By Project'],
+              [
+                'interval',
+                period === 'day' ? 'By Date' : period === 'week' ? 'By Week' : 'By Week',
+              ],
+            ] as [CategoryTab, string][]
+          ).map(([key, label]) => (
             <Button
               key={key}
               type="button"
-              onClick={() => { setCategoryTab(key); setSubTab('__first__'); }}
+              onClick={() => {
+                setCategoryTab(key);
+                setSubTab('__first__');
+              }}
               className={`-mb-px rounded-t-lg border-b-2 px-3.5 py-2 text-xs font-medium transition-colors ${
                 categoryTab === key
                   ? 'border-mgs-blue text-mgs-blue'
@@ -187,14 +242,19 @@ export function DetailsPanel({ details, period, devNameMap, reportKey }: Details
 
       {/* Table */}
       {filtered.length === 0 ? (
-        <div className="py-12 text-center text-sm text-mgs-text-dim">No data for this selection.</div>
+        <div className="py-12 text-center text-sm text-mgs-text-dim">
+          No data for this selection.
+        </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="border-b border-mgs-border">
                 {columns.map((col) => (
-                  <th key={col.key} className="px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[0.9px] text-mgs-text-faint">
+                  <th
+                    key={col.key}
+                    className="px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[0.9px] text-mgs-text-faint"
+                  >
                     {col.header}
                   </th>
                 ))}
@@ -204,7 +264,9 @@ export function DetailsPanel({ details, period, devNameMap, reportKey }: Details
               {pageRows.map((d, i) => (
                 <tr key={i} className="border-b border-mgs-border/50 last:border-0">
                   {columns.map((col) => (
-                    <td key={col.key} className="px-4 py-2.5">{col.render(d)}</td>
+                    <td key={col.key} className="px-4 py-2.5">
+                      {col.render(d)}
+                    </td>
                   ))}
                 </tr>
               ))}
@@ -228,7 +290,10 @@ export function DetailsPanel({ details, period, devNameMap, reportKey }: Details
                 <Button
                   key={size}
                   type="button"
-                  onClick={() => { setPageSize(size); setCurrentPage(0); }}
+                  onClick={() => {
+                    setPageSize(size);
+                    setCurrentPage(0);
+                  }}
                   className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
                     pageSize === size
                       ? 'bg-mgs-border text-mgs-text'

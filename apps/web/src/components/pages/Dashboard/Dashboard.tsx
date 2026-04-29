@@ -6,16 +6,12 @@ import { StatCard } from '../../atoms/StatCard/StatCard';
 import { Alert } from '../../atoms/Alert/Alert';
 import { ClientHoursChart } from '../../organisms/ClientHoursChart/ClientHoursChart';
 import { ClientTable } from '../../organisms/ClientTable/ClientTable';
-import {
-  StatCardSkeleton,
-  ChartSkeleton,
-  TableSkeleton,
-} from '../../atoms/Skeleton/Skeleton';
+import { StatCardSkeleton, ChartSkeleton, TableSkeleton } from '../../atoms/Skeleton/Skeleton';
 
 export function Dashboard() {
   const { month, label: monthLabel } = useMonth();
   const { data, loading, error, refetch } = useApi<ClientHoursSummaryDto>(
-    `/reports/client-hours?month=${month}`,
+    `/reports/client-hours?month=${month}`
   );
   useDataRefresh(refetch);
 
@@ -27,9 +23,7 @@ export function Dashboard() {
           subtitle={`See the full monthly breakdown of hours spent per project.`}
           badge={monthLabel}
         />
-        <Alert variant="page">
-          Error loading data: {error}
-        </Alert>
+        <Alert variant="page">Error loading data: {error}</Alert>
       </>
     );
   }
@@ -50,7 +44,7 @@ export function Dashboard() {
           <>
             {(() => {
               const nearBudget = data!.clients.filter(
-                (c) => c.isBillable && c.percentUsed >= 75 && c.percentUsed < 100,
+                (c) => c.isBillable && c.percentUsed >= 75 && c.percentUsed < 100
               );
               const nearBudgetSub =
                 nearBudget.length === 0
@@ -58,9 +52,7 @@ export function Dashboard() {
                   : nearBudget
                       .map((c) => `${c.projectName} ${c.percentUsed.toFixed(0)}%`)
                       .join(', ');
-              const overBudget = data!.clients.filter(
-                (c) => c.isBillable && c.remaining < 0,
-              );
+              const overBudget = data!.clients.filter((c) => c.isBillable && c.remaining < 0);
               const overBudgetSub =
                 overBudget.length === 0
                   ? 'all projects within budget'
@@ -118,11 +110,7 @@ export function Dashboard() {
 
       {/* Chart */}
       <div className="mb-7">
-        {loading ? (
-          <ChartSkeleton />
-        ) : (
-          <ClientHoursChart clients={data!.clients} />
-        )}
+        {loading ? <ChartSkeleton /> : <ClientHoursChart clients={data!.clients} />}
       </div>
 
       {/* Table */}
