@@ -18,9 +18,6 @@ dist/
 .DS_Store
 Thumbs.db
 
-# Prisma
-packages/db/prisma/migrations/
-
 # Linting
 .eslintcache
 
