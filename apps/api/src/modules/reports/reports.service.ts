@@ -102,10 +102,8 @@ export class ReportsService {
 
     const billableClients = clients.filter((c) => c.isBillable);
     const totalContracted = billableClients.reduce((s, c) => s + c.contracted, 0);
-    const totalUsed = clients.reduce((s, c) => s + c.used, 0);
-    const totalRemaining = billableClients
-      .filter((c) => c.remaining >= 0)
-      .reduce((s, c) => s + c.remaining, 0);
+    const totalUsed = billableClients.reduce((s, c) => s + c.used, 0);
+    const totalRemaining = totalContracted - totalUsed;
     const overBudgetCount = billableClients.filter((c) => c.remaining < 0).length;
 
     return { totalContracted, totalUsed, totalRemaining, overBudgetCount, clients };

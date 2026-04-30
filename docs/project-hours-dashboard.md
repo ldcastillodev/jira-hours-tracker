@@ -10,13 +10,13 @@ The Project Hours Dashboard (`/`) shows monthly budget consumption across all ac
 
 Five cards in a responsive grid (`grid-cols-2 md:grid-cols-3 lg:grid-cols-5`):
 
-| Card                 | Color     | Value                                                      | Sub-text                                                 |
-| -------------------- | --------- | ---------------------------------------------------------- | -------------------------------------------------------- |
-| Total Contracted     | `#3b82f6` | Sum of `monthlyBudget` across billable projects            | "all projects"                                           |
-| Hours Used           | `#10b981` | Total hours worked (billable + non-billable)               | `X% of total` (guarded against ÷0)                       |
-| Remaining Hours      | `#8b5cf6` | Sum of remaining hours for billable projects within budget | "projects within budget"                                 |
-| Near Limit           | `#f59e0b` | Count of billable projects at 75–99% consumption           | All project names + their % (e.g. `Alpha 82%, Beta 91%`) |
-| Over-Budget Projects | `#ef4444` | Count of billable projects over 100%                       | All project names + their % (e.g. `Alpha 112%`)          |
+| Card                 | Color     | Value                                                   | Sub-text                                                 |
+| -------------------- | --------- | ------------------------------------------------------- | -------------------------------------------------------- |
+| Total Contracted     | `#3b82f6` | Sum of `monthlyBudget` across billable projects         | "all projects"                                           |
+| Hours Used           | `#10b981` | Total billable hours worked                             | `X% of total` (guarded against ÷0)                       |
+| Remaining Hours      | `#8b5cf6` | `totalContracted - totalUsed` (negative if over budget) | "projects within budget"                                 |
+| Near Limit           | `#f59e0b` | Count of billable projects at 75–99% consumption        | All project names + their % (e.g. `Alpha 82%, Beta 91%`) |
+| Over-Budget Projects | `#ef4444` | Count of billable projects over 100%                    | All project names + their % (e.g. `Alpha 112%`)          |
 
 ### Near Limit logic
 
@@ -77,7 +77,7 @@ Each section only renders if it has data.
 
 A project is non-billable if its component has `isBillable = false`. Non-billable projects:
 
-- Appear in Hours Used total
+- Are **excluded** from Hours Used total
 - Are **excluded** from Total Contracted, Remaining Hours, Near Limit, Over-Budget counts
 - Appear in the Non-Billable chart and Non-Billable table section only
 
