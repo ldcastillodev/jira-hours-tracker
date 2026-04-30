@@ -26,7 +26,7 @@ export async function fetchApi<T>(path: string): Promise<T> {
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
       const res = await fetch(`${API_BASE}${path}`, {
-        signal: AbortSignal.timeout(30_000),
+        signal: AbortSignal.timeout(60_000),
       });
 
       if (!res.ok) {
@@ -82,7 +82,7 @@ export async function mutateApi<T = unknown>(
     method,
     headers: body ? { 'Content-Type': 'application/json' } : undefined,
     body: body ? JSON.stringify(body) : undefined,
-    signal: AbortSignal.timeout(30_000),
+    signal: AbortSignal.timeout(60_000),
   });
 
   if (!res.ok) {
