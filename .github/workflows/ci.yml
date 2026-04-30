@@ -44,6 +44,8 @@ jobs:
         run: npm ci
 
       - name: Generate Prisma client
+        env:
+          DATABASE_URL: "postgresql://placeholder@localhost/placeholder"
         run: npx prisma generate --schema=packages/db/prisma/schema.prisma
 
       - name: Check formatting

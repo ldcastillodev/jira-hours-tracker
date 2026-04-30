@@ -38,6 +38,8 @@ jobs:
         run: npm ci
 
       - name: Generate Prisma client
+        env:
+          DATABASE_URL: "postgresql://placeholder@localhost/placeholder"
         run: npx prisma generate --schema=packages/db/prisma/schema.prisma
 
       - name: Lint
@@ -85,12 +87,14 @@ jobs:
         run: npm ci
 
       - name: Generate Prisma client
+        env:
+          DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL }}
         run: npx prisma generate --schema=packages/db/prisma/schema.prisma
 
       - name: Run migrations
         env:
           # Use direct (non-pooled) connection — pgbouncer blocks SET statements used by migrate
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL }}
         run: npx prisma migrate deploy --schema=packages/db/prisma/schema.prisma
 
   # ── Deploy to Vercel ───────────────────────────────────────────────────────
