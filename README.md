@@ -124,12 +124,9 @@ Para desarrollo local con Docker, usa estos valores en `.env`:
 
 ```env
 DATABASE_URL="postgresql://mgs:mgs_local@localhost:5432/mgs_clients"
-DIRECT_DATABASE_URL="postgresql://mgs:mgs_local@localhost:5432/mgs_clients"
 API_PORT=3001
 CORS_ORIGIN="http://localhost:5173"
 ```
-
-> `DIRECT_DATABASE_URL` se usa para migraciones (bypasea pgbouncer). En local ambas variables apuntan a la misma DB.
 
 > Las variables de Jira (`JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`) solo son necesarias si vas a usar el sync con Jira. Para datos de prueba, el seed es suficiente.
 
@@ -728,15 +725,14 @@ See `docs/jira-sync.md` for the full implementation reference.
 
 **Vercel environment variables (production)**:
 
-| Variable              | Value                                             |
-| --------------------- | ------------------------------------------------- |
-| `DATABASE_URL`        | Neon pooled connection string (`?pgbouncer=true`) |
-| `DIRECT_DATABASE_URL` | Neon direct connection string                     |
-| `JIRA_BASE_URL`       | Jira instance URL                                 |
-| `JIRA_EMAIL`          | Jira account email                                |
-| `JIRA_API_TOKEN`      | Jira API token                                    |
+| Variable         | Value                                             |
+| ---------------- | ------------------------------------------------- |
+| `DATABASE_URL`   | Neon pooled connection string (`?pgbouncer=true`) |
+| `JIRA_BASE_URL`  | Jira instance URL                                 |
+| `JIRA_EMAIL`     | Jira account email                                |
+| `JIRA_API_TOKEN` | Jira API token                                    |
 
-> `API_PORT`, `CORS_ORIGIN`, and `VITE_API_URL` are local-dev-only and do not need to be set in Vercel.
+> `API_PORT`, `CORS_ORIGIN`, `VITE_API_URL`, and `DIRECT_DATABASE_URL` are not needed in Vercel. `DIRECT_DATABASE_URL` is only used as a GitHub Secret for `prisma migrate deploy` in CI.
 
 **Known limitation**: Jira sync (`POST /api/jira-sync/trigger`) may exceed the 10s function timeout on Vercel Hobby plan for large worklog volumes. For full syncs, trigger from local dev (`npm run dev`). The sync endpoint works for small months or as a UI confirmation — the operation itself can be run locally at any time without affecting production data.
 
@@ -805,14 +801,14 @@ See `docs/jira-sync.md` for the full implementation reference.
 
 **Required GitHub Secrets**:
 
-| Secret              | Description                                                                           |
-| ------------------- | ------------------------------------------------------------------------------------- |
-| `VERCEL_ORG_ID`     | Vercel → Settings → General → Team ID                                                 |
-| `VERCEL_PROJECT_ID` | Vercel → Project → Settings → General → Project ID                                    |
-| `VERCEL_TOKEN`      | Vercel → Account → Settings → Tokens                                                  |
-| `DATABASE_URL`      | Neon **direct** (non-pooled) connection string — required for `prisma migrate deploy` |
+| Secret                | Description                                                                                |
+| --------------------- | ------------------------------------------------------------------------------------------ |
+| `VERCEL_ORG_ID`       | Vercel → Settings → General → Team ID                                                      |
+| `VERCEL_PROJECT_ID`   | Vercel → Project → Settings → General → Project ID                                         |
+| `VERCEL_TOKEN`        | Vercel → Account → Settings → Tokens                                                       |
+| `DIRECT_DATABASE_URL` | Neon **direct** (non-pooled) connection string — passed as `DATABASE_URL` in migrate steps |
 
-> `DATABASE_URL` in this secret must be the direct Neon URL (same as local `DIRECT_DATABASE_URL`), not the pgbouncer-pooled URL — `migrate deploy` issues DDL statements that pgbouncer blocks.
+> `migrate deploy` issues DDL statements that pgbouncer blocks. The migrate job passes `DIRECT_DATABASE_URL` as `DATABASE_URL` only for migration steps — the Vercel project uses the pooled URL at runtime.
 
 **Key decisions**:
 
@@ -821,3 +817,32 @@ See `docs/jira-sync.md` for the full implementation reference.
 - `if: always() && needs.test.result == 'success' && (needs.migrate.result == 'success' || needs.migrate.result == 'skipped')` — deploy proceeds whether or not there were DB changes, but is always gated on tests passing.
 - `dorny/paths-filter@v3` for change detection — standard, well-maintained action; simpler than manual `git diff` scripting.
 - `vercel pull` → `vercel build` → `vercel deploy --prebuilt` pattern — Vercel's recommended CI flow; separates env-var injection (pull) from build and deploy steps.
+
+### Phase 18 — Vercel Serverless Deployment Fixes ✅
+
+**Scope**: Fix a series of runtime issues preventing the Vercel serverless deployment from functioning correctly after Phase 15.
+
+**Delivered**:
+
+- **SPA rewrite exclusion**: Added explicit `/api/(.*) → /api/[...path]` rewrite _before_ the catch-all SPA rewrite in `vercel.json`. The original `/(.*) → /index.html` rewrite intercepted all `/api/*` requests and returned the frontend HTML.
+
+- **Root `tsconfig.json`**: Created at repo root with `experimentalDecorators: true` and `emitDecoratorMetadata: true`. `@vercel/node` resolves TypeScript config by traversing up from the entry file. Without a root config it used TypeScript defaults where TC39 native decorators are enabled — generating `__esDecorate` instead of `__decorate`, which NestJS decorators do not support, crashing the function at startup.
+
+- **Direct Express invocation**: Replaced `serverless-http` wrapper in `api/[...path].ts` with `app.getHttpAdapter().getInstance()(req, res)`. `serverless-http` translates requests to AWS Lambda's `(event, context)` format; Vercel's runtime passes real Node.js `IncomingMessage`/`ServerResponse` objects. The adapter mismatch caused every request to hang indefinitely until the 60s function timeout.
+
+- **Function timeout**: Increased `maxDuration` from 10s to 60s in `vercel.json`.
+
+- **Prisma RHEL binary target**: Added `binaryTargets = ["native", "rhel-openssl-3.0.x"]` to the generator block. Vercel serverless functions run on RHEL 8. Without this, only the local macOS engine was generated and the function crashed at startup with a binary-not-found error.
+
+- **Migrations committed to git**: Removed `packages/db/prisma/migrations/` from `.gitignore`. The directory was excluded from the repo, so `prisma migrate deploy` in CI had no migration files to apply — the database tables were never created in production.
+
+- **Removed `directUrl` from schema**: `DIRECT_DATABASE_URL` removed from `datasource db`. The schema now only requires `DATABASE_URL`. The migrate CI job handles the direct/pooled split by passing `DIRECT_DATABASE_URL` as `DATABASE_URL` only for migration steps.
+
+- **CI placeholder env vars**: Added `DATABASE_URL: "postgresql://placeholder@localhost/placeholder"` to all `prisma generate` steps in both workflows. Prisma 6.19.x validates all `env()` declarations at schema-parse time even for `generate` — without a value the command fails before generating any client code.
+
+**Key decisions**:
+
+- Direct Express invocation over `serverless-http` — Vercel is not a Lambda environment; wrapping with a Lambda adapter adds an unnecessary translation layer that breaks request forwarding.
+- Root `tsconfig.json` over a per-function config — `@vercel/node` resolves TypeScript config by traversing up from the entry file; a single root config covers the entire NestJS import chain.
+- `directUrl` removed from schema rather than adding a second Vercel env var — the CI workflow already passes `DIRECT_DATABASE_URL` as `DATABASE_URL` for migration steps, making the schema field redundant.
+- Migrations committed to git (not generated at build time) — `prisma migrate deploy` requires the SQL files to be present; unlike `prisma db push` it does not derive schema from the Prisma file alone.

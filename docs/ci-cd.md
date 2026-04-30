@@ -61,10 +61,15 @@ Uses `dorny/paths-filter@v3` to detect whether `packages/db/prisma/schema.prisma
 Runs only when `detect-changes.outputs.db == 'true'`. Executes:
 
 ```bash
+npx prisma generate --schema=packages/db/prisma/schema.prisma
 npx prisma migrate deploy --schema=packages/db/prisma/schema.prisma
 ```
 
-Uses the `DATABASE_URL` secret — must be the **direct (non-pooled)** Neon connection string. `prisma migrate deploy` issues DDL statements that pgbouncer blocks.
+Both steps run with `DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL }}` — the direct (non-pooled) Neon connection string. `prisma migrate deploy` issues DDL statements that pgbouncer blocks.
+
+`prisma generate` also needs a real-looking `DATABASE_URL` at this stage because Prisma validates `env()` fields at schema-parse time. The direct URL satisfies this without needing a separate placeholder.
+
+> **Migration files must be committed to git.** `prisma migrate deploy` reads SQL from `packages/db/prisma/migrations/`. If that directory is gitignored the command has nothing to apply and the schema is never created in the database.
 
 ### Job: `deploy`
 
@@ -91,14 +96,14 @@ vercel deploy --prebuilt [--prod] --token=$VERCEL_TOKEN
 
 Set these under **Repo → Settings → Secrets and variables → Actions**:
 
-| Secret              | Where to find it                                                     |
-| ------------------- | -------------------------------------------------------------------- |
-| `VERCEL_ORG_ID`     | Vercel → Settings → General → Team ID                                |
-| `VERCEL_PROJECT_ID` | Vercel → Project → Settings → General → Project ID                   |
-| `VERCEL_TOKEN`      | Vercel → Account → Settings → Tokens                                 |
-| `DATABASE_URL`      | Neon → Dashboard → Connection Details → **direct** connection string |
+| Secret                | Where to find it                                                                  |
+| --------------------- | --------------------------------------------------------------------------------- |
+| `VERCEL_ORG_ID`       | Vercel → Settings → General → Team ID                                             |
+| `VERCEL_PROJECT_ID`   | Vercel → Project → Settings → General → Project ID                                |
+| `VERCEL_TOKEN`        | Vercel → Account → Settings → Tokens                                              |
+| `DIRECT_DATABASE_URL` | Neon → Dashboard → Connection Details → **direct** (non-pooled) connection string |
 
-> `DATABASE_URL` here is the non-pooled Neon URL (same as local `DIRECT_DATABASE_URL`). Do not use the pgbouncer URL — migrations will fail.
+> `DIRECT_DATABASE_URL` is passed as `DATABASE_URL` only during the `migrate` job steps. Do not use the pgbouncer URL — migrations will fail. The Vercel project itself uses the pooled `DATABASE_URL` set in Vercel environment variables (not a GitHub Secret).
 
 ---
 
