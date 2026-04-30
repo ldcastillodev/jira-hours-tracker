@@ -747,3 +747,77 @@ See `docs/jira-sync.md` for the full implementation reference.
 - Global prefix `/api` rather than path rewriting in Vercel — cleaner, single source of truth at the framework level.
 - `directUrl` required for Neon + pgbouncer — pgbouncer transaction mode doesn't support the `SET` statements Prisma uses during migrations; direct connection bypasses the pooler.
 - Cold starts on Vercel (~2-4s) are faster than Koyeb free-tier sleep (~10-30s). The existing cold start banner and retry logic remain useful and unchanged.
+
+### Phase 16 — Code Quality Toolchain (ESLint + Prettier + Husky) ✅
+
+**Scope**: Enforce consistent code style and prevent regressions via pre-commit and pre-push Git hooks.
+
+**Delivered**:
+
+- **`eslint.config.mjs`** (repo root): Single ESLint v9 flat config for the entire monorepo. Replaces the per-app configs that were deleted.
+  - Global rules: `@typescript-eslint/no-explicit-any: warn`, `no-unused-vars: warn`, `no-console: warn`, `explicit-function-return-type: off`.
+  - Web block (`apps/web/src/**/*.{ts,tsx}`): `eslint-plugin-react` + `eslint-plugin-react-hooks` — enforces hooks rules, disables prop-types and react-in-jsx-scope (not needed with React 17+ JSX transform).
+  - API block (`apps/api/src/**/*.ts`): `no-constant-condition: off` — allows the intentional `do { } while (true)` break-controlled loop in `jira-sync.service.ts`.
+  - Ends with `eslint-config-prettier` — disables all formatting rules that conflict with Prettier.
+- **`.prettierrc.json`** (repo root): `semi: true`, `singleQuote: true`, `tabWidth: 2`, `trailingComma: "es5"`, `printWidth: 100`, `arrowParens: "always"`.
+- **`.prettierignore`**: Excludes `dist/`, `.turbo/`, `packages/db/prisma/migrations/`, lock files.
+- **Husky v9** (`.husky/`):
+  - `pre-commit`: runs `npx lint-staged` — formats and lint-fixes only staged files.
+  - `pre-push`: runs `format:check` → `lint` → `npm test` — prevents pushing code that fails the full quality gate.
+- **`.lintstagedrc.json`**: `*.{ts,tsx}` → `prettier --write` + `eslint --fix`; `*.{json,md}` → `prettier --write`.
+- **Root `package.json` scripts added**: `lint:fix`, `format`, `format:check`, `prepare: "husky"`.
+- **Turbo tasks**: `lint` (no build dependency), `lint:fix` added to `turbo.json`.
+- **Baseline**: zero lint errors, 37 warnings (all `no-console` or `no-explicit-any` — non-blocking).
+
+**Code fixes applied for zero-error baseline**:
+
+- `Input.tsx`, `TableHeader.tsx`: empty interfaces → type aliases (`React.InputHTMLAttributes<…>`, `React.ThHTMLAttributes<…>`).
+- `ClientTable.tsx`: `let pctColor` useless initial assignment → direct `const` with ternary.
+- `DownloadMenu.tsx`: unnecessary escape sequences `<\/script>` → `</script>` (2 occurrences).
+- `useApi.ts`: removed stale `// eslint-disable-line react-hooks/exhaustive-deps` comment.
+
+**Key decisions**:
+
+- Single root `eslint.config.mjs` over per-app configs — lint-staged runs from the repo root; per-app configs aren't found without `--no-ignore` workarounds.
+- ESLint v9 flat config — the old `extends`-based format is deprecated; flat config is the standard going forward.
+- `zod@4` installed at root devDependencies — required by `eslint-plugin-react-hooks` latest version (peer dependency).
+- `--legacy-peer-deps` for React plugin install — `eslint-plugin-react` declares `react@^18` as a peer dep but works fine with React 19.
+- `lint` script is check-only; `lint:fix` is the separate fix script — this is the correct pattern for CI (check-only) vs local dev (auto-fix).
+
+### Phase 17 — GitHub Actions CI/CD Workflows ✅
+
+**Scope**: Automated CI on every push/PR and a full deploy pipeline (test → migrate → deploy) on pushes to `develop` and `main`.
+
+**Delivered**:
+
+- **`.github/workflows/ci.yml`**: Runs on push + PR to `develop`/`main` (path-filtered). Single `ci` job: checkout → Node 20 + npm cache → `npm ci` → `prisma generate` → `format:check` → `lint` → `build` → `npm test`. Also triggered by `workflow_dispatch`.
+
+- **`.github/workflows/deploy.yml`**: Runs on push to `develop`/`main` (path-filtered + `vercel.json`). Four jobs:
+
+  | Job              | Depends on            | Condition                                                                                  |
+  | ---------------- | --------------------- | ------------------------------------------------------------------------------------------ |
+  | `test`           | —                     | Always                                                                                     |
+  | `detect-changes` | —                     | Always (uses `dorny/paths-filter@v3`)                                                      |
+  | `migrate`        | test + detect-changes | Only when `packages/db/prisma/schema.prisma` or `packages/db/prisma/migrations/**` changed |
+  | `deploy`         | test + migrate        | `test` succeeded AND (`migrate` succeeded OR was skipped)                                  |
+  - `main` branch → `vercel --prod` (production deployment).
+  - `develop` branch → Vercel preview deployment (staging URL).
+
+**Required GitHub Secrets**:
+
+| Secret              | Description                                                                           |
+| ------------------- | ------------------------------------------------------------------------------------- |
+| `VERCEL_ORG_ID`     | Vercel → Settings → General → Team ID                                                 |
+| `VERCEL_PROJECT_ID` | Vercel → Project → Settings → General → Project ID                                    |
+| `VERCEL_TOKEN`      | Vercel → Account → Settings → Tokens                                                  |
+| `DATABASE_URL`      | Neon **direct** (non-pooled) connection string — required for `prisma migrate deploy` |
+
+> `DATABASE_URL` in this secret must be the direct Neon URL (same as local `DIRECT_DATABASE_URL`), not the pgbouncer-pooled URL — `migrate deploy` issues DDL statements that pgbouncer blocks.
+
+**Key decisions**:
+
+- Separate `ci.yml` and `deploy.yml` — CI runs on PRs too (no deploy on PR); deploy only runs on branch pushes.
+- Conditional `migrate` job (not always) — avoids a Neon migration call on every push when only application code changed; migrations only run when schema files actually changed.
+- `if: always() && needs.test.result == 'success' && (needs.migrate.result == 'success' || needs.migrate.result == 'skipped')` — deploy proceeds whether or not there were DB changes, but is always gated on tests passing.
+- `dorny/paths-filter@v3` for change detection — standard, well-maintained action; simpler than manual `git diff` scripting.
+- `vercel pull` → `vercel build` → `vercel deploy --prebuilt` pattern — Vercel's recommended CI flow; separates env-var injection (pull) from build and deploy steps.
